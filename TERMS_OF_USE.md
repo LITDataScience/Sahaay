@@ -1,13 +1,13 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # Terms of Use
 
 Effective date: 2025-09-15
 
-These Terms govern your non-commercial evaluation use of the Sahaay software ("Software") made available by Sitaram Technologies Pvt. Ltd. ("Company"). By accessing or using the Software, you agree to these Terms and the LICENSE file.
+These Terms govern your non-commercial evaluation use of the Sahaay software ("Software") made available by Sahaay Technologies Pvt. Ltd. ("Company"). By accessing or using the Software, you agree to these Terms and the LICENSE file.
 
 ## 1. Eligibility and Accounts
 You must have legal capacity to contract under Indian law. If using on behalf of an entity, you represent you have authority to bind that entity.

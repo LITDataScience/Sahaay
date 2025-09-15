@@ -1,6 +1,6 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # Contributing Guidelines
@@ -21,7 +21,7 @@ Thank you for your interest. This repository is licensed for non-commercial eval
 
 ## Legal
 - By submitting a contribution, you agree it is your original work and you have the right to license it.
-- You agree to assign or license contributions to Sitaram Technologies Pvt. Ltd. under the project license.
+- You agree to assign or license contributions to Sahaay Technologies Pvt. Ltd. under the project license.
 - A Contributor License Agreement (CLA) may be required before merge.
 
 ## Developer Setup

@@ -1,6 +1,6 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 #  Sahaay DSPy-Enhanced MCP System
@@ -159,7 +159,7 @@ The DSPy system **learns and improves** automatically:
 
 ###  License and Legal
 
-This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sitaram Technologies Pvt. Ltd.
+This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
 
 See `LEGAL.md` for Terms of Use, Privacy Policy, Security Policy, Code of Conduct, Contributing and CLA, Trademark policy, and notices.
 
