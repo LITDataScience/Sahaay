@@ -1,11 +1,11 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # Legal Overview
 
-This repository is provided for non-commercial evaluation. All rights reserved by Sitaram Technologies Pvt. Ltd.
+This repository is provided for non-commercial evaluation. All rights reserved by Sahaay Technologies Pvt. Ltd.
 
 - License: see `LICENSE`
 - Copyright and Notices: see `COPYRIGHT`, `NOTICE`, `THIRD_PARTY_NOTICES`

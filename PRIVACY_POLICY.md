@@ -1,13 +1,13 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # Privacy Policy
 
 Effective date: 2025-09-15
 
-Sitaram Technologies Pvt. Ltd. ("we", "us") respects your privacy. This policy describes how we handle personal data for the Sahaay project.
+Sahaay Technologies Pvt. Ltd. ("we", "us") respects your privacy. This policy describes how we handle personal data for the Sahaay project.
 
 ## Scope
 This policy applies to data we process through the repository, issue tracker, and any demos or services we host for evaluation.

@@ -6,8 +6,13 @@ CONFIG_FILE = Path(__file__).resolve().parents[1] / "legal_config.json"
 
 # SPDX-Header-Start
 # SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-# © 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+# © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 # SPDX-Header-End
+
+"""Utility to insert SPDX license headers across the repository."""
+
+HEADER_BOUNDARY_START = "SPDX-Header-Start"
+HEADER_BOUNDARY_END = "SPDX-Header-End"
 
 
 

@@ -1,6 +1,6 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # Backend Agent
