@@ -1,6 +1,6 @@
 <!-- SPDX-Header-Start -->
 SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved.
+© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 <!-- SPDX-Header-End -->
 
 # प्रबिसि नगर कीजे सब काजा। हृदयँ राखि कोसलपुर राजा।।
@@ -313,7 +313,7 @@ This project uses the MCP (Master Control Program) orchestration system. All dev
 
 ##  License
 
-This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sitaram Technologies Pvt. Ltd.
+This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
 
 ##  Legal
 
