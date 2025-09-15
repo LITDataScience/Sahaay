@@ -22,7 +22,7 @@ SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
 
 **Stack recommendation:** Node 18+, TypeScript, Fastify or Express, Prisma ORM, PostgreSQL
 
-**Minimum endpoints:** See api_spec.md
+**Minimum endpoints:** See [API_SPEC.md](./API_SPEC.md)
 
 **Deliverables:** Project skeleton, database migrations, seed script, tests, Postman collection.
 

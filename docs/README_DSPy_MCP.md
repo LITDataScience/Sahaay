@@ -152,16 +152,16 @@ The DSPy system **learns and improves** automatically:
 
 ### 📚 Documentation
 
-- **Implementation Details**: `docs/DSPy_MCP_IMPLEMENTATION.md`
-- **Usage Examples**: `examples/mcp_usage_examples.py`
-- **Architecture**: `docs/ARCHITECTURE.md`
+- **Implementation Details**: [DSPy_MCP_IMPLEMENTATION.md](./DSPy_MCP_IMPLEMENTATION.md)
+- **Usage Examples**: [examples/mcp_usage_examples.py](../examples/mcp_usage_examples.py)
+- **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
 - **API Reference**: http://localhost:8000/docs (when running)
 
 ###  License and Legal
 
-This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
+This repository is provided under a proprietary evaluation license. See [LICENSE](../LICENSE) for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
 
-See `LEGAL.md` for Terms of Use, Privacy Policy, Security Policy, Code of Conduct, Contributing and CLA, Trademark policy, and notices.
+See [LEGAL.md](./LEGAL.md) for Terms of Use, Privacy Policy, Security Policy, Code of Conduct, Contributing and CLA, Trademark policy, and notices.
 
 ### 🎯 Ready to Use!
 

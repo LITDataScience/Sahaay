@@ -313,11 +313,11 @@ This project uses the MCP (Master Control Program) orchestration system. All dev
 
 ##  License
 
-This repository is provided under a proprietary evaluation license. See `LICENSE` for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
+This repository is provided under a proprietary evaluation license. See [LICENSE](../LICENSE) for terms. No commercial or production use is permitted without a separate written agreement with Sahaay Technologies Pvt. Ltd.
 
 ##  Legal
 
-See `LEGAL.md` for links to Terms of Use, Privacy Policy, Security Policy, Code of Conduct, Contributing and CLA, Trademark policy, and notices.
+See [LEGAL.md](./LEGAL.md) for links to Terms of Use, Privacy Policy, Security Policy, Code of Conduct, Contributing and CLA, Trademark policy, and notices.
 
 ##  Contact
 
