@@ -1,0 +1,17 @@
+Third-Party Notices for Sahaay
+
+This file lists third-party components and license notices that may be included in this project. Verify and update this file before releases.
+
+Node.js dependencies: Run `npm run licenses` in each `package.json` directory or use `npx license-checker --production --direct --json` to export dependency licenses. Aggregate results here.
+
+Python dependencies: Run `pip-licenses --format=markdown --with-authors --with-urls` to generate a list of packages and their licenses. Aggregate results here.
+
+Until generated, notable dependencies may include:
+- Expo/React Native (see `frontend/package.json`) – Licenses: MIT and others
+- Prisma (see `backend/package.json` and `backend/prisma`) – Apache-2.0
+- Express/Node (if used) – MIT
+- Python libraries from `requirements.txt` – Various
+
+Place consolidated license texts below as required by their terms.
+
+SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary

@@ -1,0 +1,137 @@
+// Sahaay Prisma Schema
+// Hyperlocal P2P borrowing platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users table
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone         String   @unique @db.VarChar(20)
+  name          String?
+  societyId     String?  @db.Uuid
+  verified      Boolean  @default(false)
+  reputationScore Float  @default(0)
+  createdAt     DateTime @default(now()) @db.Timestamp
+
+  // Relations
+  society       Society? @relation(fields: [societyId], references: [id])
+  items         Item[]
+  borrowerBookings Booking[] @relation("BorrowerBookings")
+  lenderBookings   Booking[] @relation("LenderBookings")
+  ratingsGiven  Rating[] @relation("RatingsGiven")
+  ratingsReceived Rating[] @relation("RatingsReceived")
+
+  @@map("users")
+}
+
+// Societies/Communities
+model Society {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  city      String
+  lat       Float
+  lng       Float
+
+  // Relations
+  users     User[]
+
+  @@map("societies")
+}
+
+// Item categories
+model Category {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+
+  // Relations
+  items     Item[]
+
+  @@map("categories")
+}
+
+// Items for borrowing
+model Item {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerId       String    @db.Uuid
+  title         String
+  description   String?
+  categoryId    Int
+  priceHour     Int?
+  priceDay      Int?
+  deposit       Int?
+  location      Json?     // GeoJSON or lat/lng object
+  photos        Json?     // Array of photo URLs/paths
+  availability  Json?     // Availability schedule
+  createdAt     DateTime  @default(now()) @db.Timestamp
+
+  // Relations
+  owner         User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category      Category  @relation(fields: [categoryId], references: [id])
+  bookings      Booking[]
+
+  @@map("items")
+}
+
+// Bookings
+model Booking {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itemId        String    @db.Uuid
+  borrowerId    String    @db.Uuid
+  lenderId      String    @db.Uuid
+  startTime     DateTime  @db.Timestamp
+  endTime       DateTime  @db.Timestamp
+  status        String    @default("requested") // requested, accepted, pickup_scheduled, picked_up, in_use, returned, cancelled, disputed
+  depositHeld   Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @db.Timestamp
+
+  // Relations
+  item          Item      @relation(fields: [itemId], references: [id])
+  borrower      User      @relation("BorrowerBookings", fields: [borrowerId], references: [id])
+  lender        User      @relation("LenderBookings", fields: [lenderId], references: [id])
+  payments      Payment[]
+  ratings       Rating[]
+
+  @@map("bookings")
+}
+
+// Payments (for deposits and fees)
+model Payment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId     String    @db.Uuid
+  amount        Int       // Amount in paisa (1/100 of rupee)
+  currency      String    @default("INR") @db.VarChar(5)
+  status        String    // pending, completed, failed, refunded
+  provider      String?   @db.VarChar(50) // upi, card, wallet
+  metadata      Json?     // Additional payment data
+  createdAt     DateTime  @default(now()) @db.Timestamp
+
+  // Relations
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+// Ratings and reviews
+model Rating {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId     String    @db.Uuid
+  raterId       String    @db.Uuid
+  rateeId       String    @db.Uuid
+  rating        Int       // 1-5 stars
+  comment       String?
+  createdAt     DateTime  @default(now()) @db.Timestamp
+
+  // Relations
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  rater         User      @relation("RatingsGiven", fields: [raterId], references: [id])
+  ratee         User      @relation("RatingsReceived", fields: [rateeId], references: [id])
+
+  @@map("ratings")
+}

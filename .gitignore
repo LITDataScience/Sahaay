@@ -1,0 +1,53 @@
+# ----- Node/JS/TS -----
+**/node_modules/
+**/.pnp
+**/.pnp.*
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----- Build outputs -----
+**/dist/
+**/build/
+**/.next/
+**/out/
+**/web-build/
+
+# ----- Expo / React Native / Metro -----
+**/.expo/
+**/.expo/*
+**/.metro-cache/
+# Keep .expo-shared tracked (assets map)
+!.expo-shared
+
+# ----- Env / secrets -----
+.env
+.env.*
+!.env.example
+
+# ----- Prisma / local DBs -----
+**/prisma/*.db
+**/prisma/*.db-journal
+**/prisma/*.sqlite
+**/prisma/*.sqlite3
+
+# ----- Test coverage -----
+coverage/
+
+# ----- IDE / OS cruft -----
+.vscode/
+.idea/
+.history/
+.DS_Store
+Thumbs.db
+
+# ----- Temporary files -----
+tmp/
+temp/
+

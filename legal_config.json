@@ -1,0 +1,10 @@
+{
+  "spdxIdentifier": "LicenseRef-Sahaay-Proprietary",
+  "copyrightOwner": "Sitaram Technologies Pvt. Ltd.",
+  "project": "Sahaay",
+  "year": 2025,
+  "includeExtensions": [".ts", ".tsx", ".js", ".jsx", ".py", ".sh", ".md"],
+  "excludePaths": ["node_modules", "**/dist/**", "**/build/**", "**/.venv/**", "**/.git/**"],
+  "headerTemplate": "SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary\n© 2025 Sitaram Technologies Pvt. Ltd. All rights reserved."
+}
+

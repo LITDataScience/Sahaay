@@ -1,0 +1,52 @@
+# Sahaay Python Dependencies
+# AI/ML and RAG Components
+torch>=2.0.0
+transformers>=4.30.0
+huggingface-hub>=0.16.0
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.0
+chromadb>=0.4.0
+langchain>=0.0.300
+unsloth>=0.5.0
+accelerate>=0.20.0
+bitsandbytes>=0.41.0
+
+# Data Processing and ML
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+xgboost>=1.7.0
+
+# Web Framework and API
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# Database
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+requests>=2.31.0
+aiohttp>=3.8.0
+redis>=4.6.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+
+# Development
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.5.0
+
+# MCP and Agent Framework - DSPy Enhanced
+dspy-ai>=3.0.3
+crewai>=0.1.0
+langchain-community>=0.0.13
+optuna>=3.4.0
+
+

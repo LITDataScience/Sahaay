@@ -1,0 +1,54 @@
+Sahaay Proprietary License
+
+Copyright (c) 2025, Sitaram Technologies Pvt. Ltd. and contributors.
+All rights reserved.
+
+1. Grant of Limited License
+Subject to your continued compliance with this License, Sitaram Technologies Pvt. Ltd. ("Licensor") grants you a limited, non-exclusive, non-transferable, revocable license to internally view, evaluate, and test the software and associated materials (the "Software") for non-commercial purposes only.
+
+2. Restrictions
+You shall not, and shall not permit any third party to:
+- use the Software for any commercial purpose or in production;
+- copy, modify, create derivative works of, distribute, sublicense, sell, lease, or otherwise transfer the Software or any portion thereof;
+- remove or alter any proprietary notices or labels on the Software;
+- benchmark, publish, or disclose performance or security test results without Licensor's prior written consent;
+- use the Software to train, fine-tune, or otherwise improve AI/ML models without Licensor's prior written consent;
+- use the Software in violation of applicable laws, including Indian law.
+
+3. Ownership
+The Software is licensed, not sold. Licensor and its licensors retain all right, title, and interest in and to the Software, including all intellectual property rights therein. No implied licenses are granted.
+
+4. Feedback
+If you provide feedback or suggestions regarding the Software, you grant Licensor a perpetual, irrevocable, worldwide, royalty-free license to use and incorporate such feedback without restriction or compensation to you.
+
+5. Confidentiality
+The Software and any non-public information disclosed by Licensor are confidential. You shall not disclose such information to any third party without Licensor's prior written consent.
+
+6. Third-Party Components
+Certain components of the Software may be provided by third parties under separate terms. You must comply with those terms, which are identified in the file named THIRD_PARTY_NOTICES.
+
+7. Disclaimer of Warranties
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, LICENSOR DISCLAIMS ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT.
+
+8. Limitation of Liability
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF PROFITS, REVENUE, DATA, OR USE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. LICENSOR'S TOTAL LIABILITY FOR ALL CLAIMS RELATING TO THE SOFTWARE SHALL NOT EXCEED INR 10,000.
+
+9. Indemnity
+You shall indemnify, defend, and hold harmless Licensor from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising from or related to your use of the Software in violation of this License or applicable law.
+
+10. Term and Termination
+This License is effective until terminated. Licensor may terminate this License at any time upon notice if you breach its terms. Upon termination, you must cease all use of the Software and destroy all copies in your possession or control.
+
+11. Governing Law and Dispute Resolution
+This License shall be governed by and construed in accordance with the laws of India. Subject to Section 12, the courts in Bengaluru, Karnataka, India shall have exclusive jurisdiction. You agree to first attempt to resolve disputes amicably; if unresolved, disputes shall be referred to arbitration under the Arbitration and Conciliation Act, 1996, by a sole arbitrator appointed by Licensor. The seat and venue of arbitration shall be Bengaluru, Karnataka. The language shall be English.
+
+12. Export Compliance
+You represent that you are not located in, under the control of, or a national or resident of any country subject to embargo, sanctions, or export restrictions under applicable laws. You agree to comply with all applicable export control and sanctions laws, including Indian and U.S. laws, as applicable.
+
+13. Entire Agreement; Updates
+This License constitutes the entire agreement concerning the Software and supersedes any prior or contemporaneous understandings. Licensor may update this License by posting an updated version in the repository. Your continued use of the Software constitutes acceptance of the updated terms.
+
+14. Contact
+For permissions and commercial licensing, contact: legal@sitaramtech.in
+
+SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary

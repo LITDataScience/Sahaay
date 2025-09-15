@@ -1,0 +1,11 @@
+# Default owners
+* @sitaramtech/maintainers
+
+# Backend
+/backend/ @sitaramtech/backend
+
+# Frontend
+/frontend/ @sitaramtech/frontend
+
+# Python
+/mcp_dspy/ @sitaramtech/ml
