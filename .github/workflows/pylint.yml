@@ -5,12 +5,11 @@ on:
     paths:
       - '**/*.py'
       - '.pylintrc'
-      - 'requirements.txt'
   pull_request:
     paths:
       - '**/*.py'
       - '.pylintrc'
-      - 'requirements.txt'
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -20,11 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
+      - name: Install pylint only
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pylint
+          pip install --disable-pip-version-check --no-input pylint
       - name: Run pylint
         run: |
           pylint $(git ls-files '*.py')

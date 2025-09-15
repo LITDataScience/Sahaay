@@ -1,0 +1,60 @@
+name: Backend CI (Node)
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'backend/api/**'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'backend/api/**'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies (root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend package
+        working-directory: backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Generate Prisma client (backend)
+        if: always()
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          pnpm exec prisma generate
+
+      - name: Typecheck backend/api if present
+        working-directory: backend/api
+        run: |
+          if [ -f package.json ] && [ -f tsconfig.json ]; then \
+            pnpm install --frozen-lockfile && pnpm exec tsc -v && pnpm exec tsc --noEmit; \
+          else \
+            echo "No tsconfig.json in backend/api, skipping typecheck"; \
+          fi
+
+
