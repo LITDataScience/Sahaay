@@ -110,7 +110,10 @@ class OwnerAgent(BaseAgent):
             }
             
             self.status = "available"
-            logger.info(f"OwnerAgent generated backlog with {len(result.user_stories.split('\n'))} stories")
+            logger.info(
+                "OwnerAgent generated backlog with %d stories",
+                len(result.user_stories.splitlines()),
+            )
             
             return backlog
             

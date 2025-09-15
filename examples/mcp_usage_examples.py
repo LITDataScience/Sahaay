@@ -188,7 +188,7 @@ async def example_5_system_optimization():
     Example 5: System optimization
     Demonstrates how to optimize agent performance and system efficiency
     """
-    print("\n⚡ Example 5: System Optimization")
+    print("\n Example 5: System Optimization")
     print("-" * 50)
     
     orchestrator = MCPOrchestrator()
@@ -270,7 +270,7 @@ async def example_6_real_world_scenario():
     }
     
     backlog_result = owner_agent.forward(**planning_input)
-    print(f"Generated user stories: {len(backlog_result['user_stories'].split('\\n'))} stories")
+    print(f"Generated user stories: {len(backlog_result['user_stories'].splitlines())} stories")
     
     # Step 2: Technical implementation
     print("\n2. Technical Implementation Phase")
@@ -376,7 +376,7 @@ async def main():
         print("=" * 60)
         
     except Exception as e:
-        print(f"\n❌ Example execution failed: {str(e)}")
+        print(f"\n Example execution failed: {str(e)}")
 
 
 if __name__ == "__main__":

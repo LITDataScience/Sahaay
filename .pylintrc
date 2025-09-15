@@ -1,0 +1,14 @@
+[MASTER]
+ignore=node_modules,dist,build,.venv
+
+[MESSAGES CONTROL]
+disable=C0303,C0305,C0411,C0415,R0903,W1203,W0611,W0612,W0613,W0401
+
+[FORMAT]
+max-line-length=120
+
+[TYPECHECK]
+ignored-modules=dspy,uvicorn,fastapi,numpy
+
+[REPORT]
+output-format=colorized
