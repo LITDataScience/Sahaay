@@ -3,71 +3,21 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
-
-interface Item {
-  id: string;
-  title: string;
-  price: number;
-  deposit: number;
-  image: string;
-  owner: string;
-  distance: string;
-}
-
-const mockItems: Item[] = [
-  {
-    id: '1',
-    title: 'Professional Camera',
-    price: 500,
-    deposit: 5000,
-    image: 'https://via.placeholder.com/150',
-    owner: 'Rahul Sharma',
-    distance: '2.3 km',
-  },
-  {
-    id: '2',
-    title: 'Gaming Laptop',
-    price: 800,
-    deposit: 8000,
-    image: 'https://via.placeholder.com/150',
-    owner: 'Priya Patel',
-    distance: '1.8 km',
-  },
-  {
-    id: '3',
-    title: 'Power Drill Set',
-    price: 300,
-    deposit: 2000,
-    image: 'https://via.placeholder.com/150',
-    owner: 'Amit Kumar',
-    distance: '3.1 km',
-  },
-];
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, useWindowDimensions } from 'react-native';
+import SearchBar from '../components/SearchBar';
+import CategoryChips from '../components/CategoryChips';
+import ItemCard, { Item } from '../components/ItemCard';
+import { categories as categoriesData, searchItems } from '../services/mockData';
 
 const HomeScreen = ({ navigation }: any) => {
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('All');
+  const data = useMemo(() => searchItems(query, category), [query, category]);
+  const { width } = useWindowDimensions();
+  const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
   const renderItem = ({ item }: { item: Item }) => (
-    <TouchableOpacity
-      style={styles.itemCard}
-      onPress={() => navigation.navigate('ItemDetail', { item })}
-    >
-      <Image source={{ uri: item.image }} style={styles.itemImage} />
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemTitle}>{item.title}</Text>
-        <Text style={styles.itemPrice}>₹{item.price}/day</Text>
-        <Text style={styles.itemDeposit}>Deposit: ₹{item.deposit}</Text>
-        <Text style={styles.itemOwner}>{item.owner}</Text>
-        <Text style={styles.itemDistance}>{item.distance}</Text>
-      </View>
-    </TouchableOpacity>
+    <ItemCard item={item} onPress={() => navigation.navigate('ItemDetail', { item })} />
   );
 
   return (
@@ -77,24 +27,19 @@ const HomeScreen = ({ navigation }: any) => {
         <Text style={styles.headerSubtitle}>Borrow from your neighborhood</Text>
       </View>
 
-      <View style={styles.filters}>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterText}>All Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterText}>Electronics</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton}>
-          <Text style={styles.filterText}>Tools</Text>
-        </TouchableOpacity>
+      <View style={styles.searchWrapper}>
+        <SearchBar value={query} onChangeText={setQuery} />
       </View>
 
+      <CategoryChips categories={categoriesData} selected={category} onSelect={setCategory} />
+
       <FlatList
-        data={mockItems}
+        data={data}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}
         showsVerticalScrollIndicator={false}
+        numColumns={numColumns}
       />
 
       <TouchableOpacity
@@ -129,77 +74,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.9,
   },
-  filters: {
-    flexDirection: 'row',
-    padding: 15,
-    backgroundColor: '#fff',
-  },
-  filterButton: {
-    backgroundColor: '#f0f0f0',
+  searchWrapper: {
     paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#333',
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
   },
   listContainer: {
     padding: 15,
   },
-  itemCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    flexDirection: 'row',
-    overflow: 'hidden',
+  listGrid: {
+    gap: 15,
   },
-  itemImage: {
-    width: 100,
-    height: 100,
-    borderTopLeftRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  itemInfo: {
-    flex: 1,
-    padding: 15,
-  },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  itemPrice: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  itemDeposit: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 3,
-  },
-  itemOwner: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-  itemDistance: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
+  
   fab: {
     position: 'absolute',
     bottom: 20,

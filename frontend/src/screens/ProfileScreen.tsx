@@ -3,22 +3,41 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const ProfileScreen = ({ navigation }: any) => {
+  const { user, logout, updateProfile } = useAuth();
+  const initials = useMemo(() => user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'U', [user]);
+  const [name, setName] = useState(user?.name || '');
+
+  const onSave = async () => {
+    await updateProfile({ name });
+    Alert.alert('Profile updated');
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>JD</Text>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
-        <Text style={styles.name}>John Doe</Text>
-        <Text style={styles.phone}>+91 9876543210</Text>
-        <Text style={styles.reputation}> 4.8 Reputation</Text>
+        <Text style={styles.name}>{user?.name || 'Guest'}</Text>
+        <Text style={styles.phone}>{user?.phone || ''}</Text>
+        <Text style={styles.reputation}> {user?.reputation?.toFixed(1) || '4.5'} Reputation</Text>
       </View>
 
       <View style={styles.menu}>
+        <Text style={styles.sectionTitle}>Profile</Text>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Your name" />
+          <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+            <Text style={styles.saveText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.menuItem}>
           <Text style={styles.menuText}> My Listings</Text>
         </TouchableOpacity>
@@ -39,7 +58,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <Text style={styles.menuText}> Support</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -91,6 +110,41 @@ const styles = StyleSheet.create({
   },
   menu: {
     padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  formGroup: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+    padding: 12,
+    marginTop: 12,
+  },
+  saveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   menuItem: {
     backgroundColor: '#fff',

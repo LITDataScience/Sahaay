@@ -12,33 +12,34 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }: any) => {
+  const { loginWithPhoneOtp } = useAuth();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
+  const [sentOtp, setSentOtp] = useState<string | null>(null);
 
   const handleSendOtp = () => {
     if (phone.length !== 10) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
+    // Generate demo OTP for local/dev usage
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setSentOtp(code);
     setShowOtp(true);
-    Alert.alert('OTP Sent', 'OTP has been sent to your phone number');
+    Alert.alert('OTP Sent', `Use ${code} to login (demo)`);
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
       Alert.alert('Error', 'Please enter a valid 6-digit OTP');
       return;
     }
-    // Mock verification - in real app, this would call the API
-    Alert.alert('Success', 'Login successful!', [
-      {
-        text: 'OK',
-        onPress: () => navigation.navigate('Home'),
-      },
-    ]);
+    await loginWithPhoneOtp(phone, otp);
+    Alert.alert('Success', 'Login successful!');
   };
 
   return (
@@ -74,6 +75,10 @@ const LoginScreen = ({ navigation }: any) => {
               onChangeText={setOtp}
               maxLength={6}
             />
+
+            {sentOtp ? (
+              <Text style={styles.hint}>Demo OTP: {sentOtp}</Text>
+            ) : null}
 
             <TouchableOpacity style={styles.button} onPress={handleVerifyOtp}>
               <Text style={styles.buttonText}>Verify OTP</Text>
@@ -158,6 +163,11 @@ const styles = StyleSheet.create({
   resendText: {
     color: '#007AFF',
     fontSize: 16,
+  },
+  hint: {
+    textAlign: 'center',
+    color: '#888',
+    marginBottom: 10,
   },
 });
 
