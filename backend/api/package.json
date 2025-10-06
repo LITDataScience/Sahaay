@@ -4,7 +4,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.3.3",
+    "@types/node": "^24.6.2",
     "axios": "^1.12.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
