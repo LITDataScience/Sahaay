@@ -9,6 +9,9 @@
       "distribution": "internal"
     },
     "preview": {
+      "android": {
+        "image": "latest"
+      },
       "distribution": "internal"
     },
     "production": {
