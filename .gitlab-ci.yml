@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # This file is a template, and might need editing before it works on your project.
 # This is a sample GitLab CI/CD configuration file that should run without any modifications.
 # It demonstrates a basic 3 stage CI/CD pipeline. Instead of real tests or scripts,
@@ -47,3 +48,74 @@ deploy-job:      # This job runs in the deploy stage.
   script:
     - echo "Deploying application..."
     - echo "Application successfully deployed."
+=======
+stages:
+  - build
+  - test
+  - security
+
+variables:
+  PNPM_CACHE_DIR: .pnpm-store
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .pnpm-store
+    - node_modules/
+
+# Node.js (Frontend & Backend) dependencies and checks
+.node-job:
+  image: node:20
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install
+
+build:node:
+  extends: .node-job
+  stage: build
+  script:
+    - pnpm build
+
+test:backend:
+  extends: .node-job
+  stage: test
+  script:
+    - cd backend
+    - pnpm test
+
+test:frontend:
+  extends: .node-job
+  stage: test
+  script:
+    - cd frontend
+    - pnpm test
+
+# Python (Backend/AI) dependencies and checks
+test:python:
+  image: python:3.11
+  stage: test
+  script:
+    - pip install -r requirements.txt
+    - pip install pytest
+    # Assuming python tests are in tests/ or backend/tests
+    # Adjust path as necessary
+    - pytest
+
+# Dependency Scanning
+audit:npm:
+  extends: .node-job
+  stage: security
+  script:
+    - pnpm audit --prod
+  allow_failure: true
+
+audit:python:
+  image: python:3.11
+  stage: security
+  script:
+    - pip install safety
+    - safety check -r requirements.txt
+  allow_failure: true
+>>>>>>> b60a5e5 (chore: fix dependencies and add CI/CD pipeline)
