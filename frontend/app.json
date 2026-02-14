@@ -16,14 +16,15 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.shivshakti2.sahaay"
+      "bundleIdentifier": "com.shivshakti.sahaay"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#007AFF"
       },
-      "package": "com.shivshakti2.sahaay",
+      "package": "com.shivshakti.sahaay",
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
@@ -64,6 +65,19 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#007AFF"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0"
+          },
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
