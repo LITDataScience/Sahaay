@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.role == 'admin'; }
+    function isProvider() { return signedIn() && request.auth.token.role in ['provider','admin']; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+
+    match /users/{uid} {
+      allow create: if signedIn() && isSelf(uid);
+      allow read: if signedIn();
+      allow update, delete: if isSelf(uid) || isAdmin();
+    }
+
+    match /societies/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /items/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid || isAdmin();
+    }
+
+    match /bookings/{id} {
+      allow read: if signedIn() &&
+        (request.auth.uid in [resource.data.borrowerId, resource.data.lenderId] || isAdmin());
+      allow create: if signedIn() && request.resource.data.borrowerId == request.auth.uid;
+      allow update: if signedIn() &&
+        (request.auth.uid in [resource.data.borrowerId, resource.data.lenderId] || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /services/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.providerId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.providerId == request.auth.uid || isAdmin();
+    }
+
+    match /serviceBookings/{id} {
+      allow read: if signedIn() &&
+        (request.auth.uid in [resource.data.customerId, resource.data.providerId] || isAdmin());
+      allow create: if signedIn() && request.resource.data.customerId == request.auth.uid;
+      allow update: if signedIn() &&
+        (request.auth.uid in [resource.data.customerId, resource.data.providerId] || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /chatRooms/{roomId} {
+      allow read, update, delete: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create: if signedIn() && request.resource.data.participants.hasAny([request.auth.uid]);
+      match /messages/{messageId} {
+        allow read, create: if signedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.participants;
+        allow delete: if false;
+      }
+    }
+
+    match /ratings/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /payments/{id} {
+      allow read: if signedIn() &&
+        (request.auth.uid in [resource.data.payerId, resource.data.payeeId] || isAdmin());
+      allow create, update: if isAdmin(); // written via Functions only
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{id} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /favorites/{id} {
+      allow read, create, delete: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /reports/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+  }
+}

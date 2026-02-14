@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    match /item_images/{itemId}/{file} {
+      allow read: if true;
+      allow write: if signedIn(); // ownership checked in Firestore on publish
+    }
+    match /service_images/{serviceId}/{file} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+    match /user_docs/{uid}/kyc/{file} {
+      allow read, write: if isOwner(uid);
+    }
+    match /chat_attachments/{roomId}/{file} {
+      allow read, write: if signedIn(); // membership verified by app before upload
+    }
+  }
+}
