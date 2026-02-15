@@ -10,7 +10,7 @@ dist/
 web-build/
 
 # Native
-android/
+# android/
 ios/
 .idea/
 .gradle/
@@ -23,5 +23,5 @@ build/
 
 # Expo
 .eas/
-google-services.json
+# google-services.json
 GoogleService-Info.plist
