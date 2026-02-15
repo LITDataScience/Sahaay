@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "400664256540",
+    "project_id": "sahaay-shivshakti-13",
+    "storage_bucket": "sahaay-shivshakti-13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:400664256540:android:f1bcae06dc29d44890bfd9",
+        "android_client_info": {
+          "package_name": "com.shivshakti.sahaay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5Yv-tvsCzFea8s7jpZjSMpC4DnB29xc4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
