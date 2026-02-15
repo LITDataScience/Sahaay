@@ -1,0 +1,23 @@
+! Git branch has uncommitted file changes
+› It's recommended to commit all changes before proceeding in case you want to revert generated changes.
+Git status is dirty but the command will continue because the terminal is not interactive.
+- Clearing android
+√ Cleared android code
+- Creating native directory (./android)
+√ Created native directory
+- Updating package.json
+√ Updated package.json | no changes
+- Running prebuild
+× Prebuild failed
+Error: [android.dangerous]: withAndroidDangerousBaseMod: An error occurred while configuring Android notifications. Encountered an issue resizing Android notification icon: Error: ENOENT: no such file or directory, open 'E:\Sahaay\frontend\assets\notification-icon.png'
+Error: [android.dangerous]: withAndroidDangerousBaseMod: An error occurred while configuring Android notifications. Encountered an issue resizing Android notification icon: Error: ENOENT: no such file or directory, open 'E:\Sahaay\frontend\assets\notification-icon.png'
+    at E:\Sahaay\node_modules\.pnpm\expo-notifications@0.32.11__24cb9e489bb36e13f9a6e4cffae1b198\node_modules\expo-notifications\plugin\build\withNotificationsAndroid.js:146:19
+    at async Promise.all (index 0)
+    at async writeNotificationIconImageFilesAsync (E:\Sahaay\node_modules\.pnpm\expo-notifications@0.32.11__24cb9e489bb36e13f9a6e4cffae1b198\node_modules\expo-notifications\plugin\build\withNotificationsAndroid.js:128:5)
+    at async setNotificationIconAsync (E:\Sahaay\node_modules\.pnpm\expo-notifications@0.32.11__24cb9e489bb36e13f9a6e4cffae1b198\node_modules\expo-notifications\plugin\build\withNotificationsAndroid.js:95:9)
+    at async E:\Sahaay\node_modules\.pnpm\expo-notifications@0.32.11__24cb9e489bb36e13f9a6e4cffae1b198\node_modules\expo-notifications\plugin\build\withNotificationsAndroid.js:42:13
+    at async action (E:\Sahaay\node_modules\.pnpm\@expo+config-plugins@54.0.1\node_modules\@expo\config-plugins\build\plugins\withMod.js:199:23)
+    at async interceptingMod (E:\Sahaay\node_modules\.pnpm\@expo+config-plugins@54.0.1\node_modules\@expo\config-plugins\build\plugins\withMod.js:104:21)
+    at async interceptingMod (E:\Sahaay\node_modules\.pnpm\@expo+config-plugins@54.0.1\node_modules\@expo\config-plugins\build\plugins\withMod.js:104:21)
+    at async interceptingMod (E:\Sahaay\node_modules\.pnpm\@expo+config-plugins@54.0.1\node_modules\@expo\config-plugins\build\plugins\withMod.js:104:21)
+    at async interceptingMod (E:\Sahaay\node_modules\.pnpm\@expo+config-plugins@54.0.1\node_modules\@expo\config-plugins\build\plugins\withMod.js:104:21)

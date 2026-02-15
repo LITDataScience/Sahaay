@@ -4,11 +4,15 @@
 // SPDX-Header-End
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Plus } from 'lucide-react-native';
 import SearchBar from '../components/SearchBar';
 import CategoryChips from '../components/CategoryChips';
 import ItemCard, { Item } from '../components/ItemCard';
 import { categories as categoriesData, searchItems } from '../services/mockData';
+import Colors from '../constants/Colors';
+import Theme from '../constants/Theme';
 
 const HomeScreen = ({ navigation }: any) => {
   const [query, setQuery] = useState('');
@@ -16,37 +20,54 @@ const HomeScreen = ({ navigation }: any) => {
   const data = useMemo(() => searchItems(query, category), [query, category]);
   const { width } = useWindowDimensions();
   const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
+
   const renderItem = ({ item }: { item: Item }) => (
     <ItemCard item={item} onPress={() => navigation.navigate('ItemDetail', { item })} />
   );
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.primary} />
+
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Sahaay</Text>
-        <Text style={styles.headerSubtitle}>Borrow from your neighborhood</Text>
+        <LinearGradient
+          colors={[Colors.primary, Colors.darkPrimary]}
+          style={styles.headerGradient}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.headerTitle}>Sahaay</Text>
+              <Text style={styles.headerSubtitle}>Borrow from your neighborhood</Text>
+            </View>
+          </View>
+
+          <View style={styles.searchWrapper}>
+            <SearchBar value={query} onChangeText={setQuery} />
+          </View>
+        </LinearGradient>
       </View>
 
-      <View style={styles.searchWrapper}>
-        <SearchBar value={query} onChangeText={setQuery} />
+      <View style={styles.contentContainer}>
+        <View style={styles.categoriesWrapper}>
+          <CategoryChips categories={categoriesData} selected={category} onSelect={setCategory} />
+        </View>
+
+        <FlatList
+          data={data}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}
+          showsVerticalScrollIndicator={false}
+          numColumns={numColumns}
+        />
       </View>
-
-      <CategoryChips categories={categoriesData} selected={category} onSelect={setCategory} />
-
-      <FlatList
-        data={data}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}
-        showsVerticalScrollIndicator={false}
-        numColumns={numColumns}
-      />
 
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('CreateListing')}
+        activeOpacity={0.8}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Plus size={32} color={Colors.text.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -55,61 +76,64 @@ const HomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   header: {
-    backgroundColor: '#007AFF',
-    padding: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: Colors.primary,
+    ...Theme.shadows.medium,
+  },
+  headerGradient: {
     paddingTop: 50,
-    alignItems: 'center',
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+    color: Colors.text.primary,
+    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#fff',
-    opacity: 0.9,
+    color: Colors.text.primary,
+    opacity: 0.8,
   },
   searchWrapper: {
-    paddingHorizontal: 15,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#fff',
+    marginTop: 8,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  categoriesWrapper: {
+    paddingVertical: 12,
   },
   listContainer: {
-    padding: 15,
+    padding: 16,
+    paddingTop: 0,
   },
   listGrid: {
-    gap: 15,
+    gap: 16,
   },
-  
   fab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#007AFF',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: 24,
+    right: 24,
+    backgroundColor: Colors.primary, // Yellow FAB
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  fabText: {
-    fontSize: 30,
-    color: '#fff',
-    fontWeight: 'bold',
+    ...Theme.shadows.large,
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
 });
 
