@@ -1,10 +1,8 @@
-// SPDX-Header-Start
-// SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-// © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
-// SPDX-Header-End
-
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
+import { Search } from 'lucide-react-native';
+import Colors from '../constants/Colors';
+import Theme from '../constants/Theme';
 
 type Props = {
 	placeholder?: string;
@@ -21,10 +19,12 @@ const SearchBar: React.FC<Props> = ({ placeholder = 'Search items, categories, u
 	};
 	return (
 		<View style={styles.container}>
+			<Search size={20} color={Colors.text.placeholder} style={styles.icon} />
 			<TextInput
 				value={text}
 				style={styles.input}
 				placeholder={placeholder}
+				placeholderTextColor={Colors.text.placeholder}
 				returnKeyType="search"
 				onChangeText={setText}
 			/>
@@ -34,18 +34,23 @@ const SearchBar: React.FC<Props> = ({ placeholder = 'Search items, categories, u
 
 const styles = StyleSheet.create({
 	container: {
-		backgroundColor: '#fff',
-		borderRadius: 10,
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 1 },
-		shadowOpacity: 0.08,
-		shadowRadius: 2,
-		elevation: 2,
+		backgroundColor: Colors.surface,
+		borderRadius: Theme.borderRadius.round, // Pill shape
+		paddingHorizontal: Theme.spacing.md,
+		paddingVertical: 12, // Slightly taller
+		flexDirection: 'row',
+		alignItems: 'center',
+		...Theme.shadows.small,
+		borderWidth: 1,
+		borderColor: Colors.border,
+	},
+	icon: {
+		marginRight: 10,
 	},
 	input: {
+		flex: 1,
 		fontSize: 16,
+		color: Colors.text.primary,
 	},
 });
 

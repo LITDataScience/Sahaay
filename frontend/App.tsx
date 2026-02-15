@@ -19,13 +19,14 @@ import CreateListingScreen from './src/screens/CreateListingScreen';
 import BookingScreen from './src/screens/BookingScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import Colors from './src/constants/Colors';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
 
 function TabsNavigator() {
   return (
-    <Tabs.Navigator screenOptions={{ headerShown: false }}>
+    <Tabs.Navigator screenOptions={{ headerShown: false }} id={undefined}>
       <Tabs.Screen name="HomeTab" component={HomeScreen} options={{ title: 'Home' }} />
       <Tabs.Screen name="CreateListing" component={CreateListingScreen} options={{ title: 'Create' }} />
       <Tabs.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
@@ -37,27 +38,34 @@ function RootNavigator() {
   const { user } = useAuth();
   const theme: Theme = {
     ...DefaultTheme,
-    colors: { ...DefaultTheme.colors, background: '#ffffff' },
+    colors: {
+      ...DefaultTheme.colors,
+      background: Colors.background,
+      primary: Colors.primary,
+      card: Colors.surface,
+      text: Colors.text.primary,
+    },
   };
   return (
     <NavigationContainer theme={theme}>
       <Stack.Navigator
         initialRouteName={user ? 'Main' : 'Login'}
+        id={undefined}
         screenOptions={{
-          headerStyle: { backgroundColor: '#007AFF' },
-          headerTintColor: '#fff',
+          headerStyle: { backgroundColor: Colors.primary },
+          headerTintColor: Colors.text.primary,
           headerTitleStyle: { fontWeight: 'bold' },
         }}
       >
         {!user ? (
-          <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         ) : (
           <Stack.Screen name="Main" component={TabsNavigator} options={{ headerShown: false }} />
         )}
         <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: 'Item Details' }} />
         <Stack.Screen name="Booking" component={BookingScreen} options={{ title: 'Book Item' }} />
       </Stack.Navigator>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </NavigationContainer>
   );
 }

@@ -3,7 +3,7 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,21 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import Colors from '../constants/Colors';
+import Theme from '../constants/Theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
+import { LogIn, Phone, ArrowRight, Chrome, Facebook as FacebookIcon } from 'lucide-react-native';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }: any) => {
   const { loginWithPhoneOtp } = useAuth();
@@ -20,6 +33,35 @@ const LoginScreen = ({ navigation }: any) => {
   const [otp, setOtp] = useState('');
   const [showOtp, setShowOtp] = useState(false);
   const [sentOtp, setSentOtp] = useState<string | null>(null);
+
+  // Google Auth Request
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    // Client IDs should be added here
+    androidClientId: '400664256540-20fahhlp2p0vecc1sjheohclrv4msbnu.apps.googleusercontent.com',
+    iosClientId: 'YOUR_IOS_CLIENT_ID',
+    webClientId: 'YOUR_WEB_CLIENT_ID',
+  });
+
+  // Facebook Auth Request
+  const [fbRequest, fbResponse, fbPromptAsync] = Facebook.useAuthRequest({
+    clientId: 'YOUR_FACEBOOK_APP_ID',
+  });
+
+  useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      const { authentication } = googleResponse;
+      Alert.alert('Success', 'Google Login Successful (Token received)');
+      // In a real app, you would send this token to your backend
+    }
+  }, [googleResponse]);
+
+  useEffect(() => {
+    if (fbResponse?.type === 'success') {
+      const { authentication } = fbResponse;
+      Alert.alert('Success', 'Facebook Login Successful (Token received)');
+    }
+  }, [fbResponse]);
+
 
   const handleSendOtp = () => {
     if (phone.length !== 10) {
@@ -39,135 +81,259 @@ const LoginScreen = ({ navigation }: any) => {
       return;
     }
     await loginWithPhoneOtp(phone, otp);
-    Alert.alert('Success', 'Login successful!');
+    // Alert.alert('Success', 'Login successful!'); // Handled by AuthContext/Navigation
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Welcome to Sahaay</Text>
-        <Text style={styles.subtitle}>Borrow from your neighborhood</Text>
-      </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <LinearGradient
+            colors={[Colors.primary, Colors.darkPrimary]}
+            style={styles.headerGradient}
+          >
+            <View style={styles.logoPlaceholder}>
+              <Text style={styles.logoText}>S</Text>
+            </View>
+            <Text style={styles.title}>Sahaay</Text>
+            <Text style={styles.subtitle}>Borrow from your neighborhood</Text>
+          </LinearGradient>
+        </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your phone number"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          maxLength={10}
-        />
+        <View style={styles.formCard}>
+          <Text style={styles.welcomeText}>Welcome Back</Text>
+          <Text style={styles.instructionText}>
+            {showOtp ? 'Enter the code sent to your phone' : 'Enter your phone number to continue'}
+          </Text>
 
-        {!showOtp ? (
-          <TouchableOpacity style={styles.button} onPress={handleSendOtp}>
-            <Text style={styles.buttonText}>Send OTP</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <Text style={styles.label}>Enter OTP</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter 6-digit OTP"
-              keyboardType="number-pad"
-              value={otp}
-              onChangeText={setOtp}
-              maxLength={6}
-            />
+          {!showOtp ? (
+            <>
+              <View style={styles.inputContainer}>
+                <Phone size={20} color={Colors.text.placeholder} style={styles.icon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Phone Number"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                  maxLength={10}
+                />
+              </View>
 
-            {sentOtp ? (
-              <Text style={styles.hint}>Demo OTP: {sentOtp}</Text>
-            ) : null}
+              <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp}>
+                <Text style={styles.primaryButtonText}>Continue</Text>
+                <ArrowRight size={20} color={Colors.text.primary} style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.inputContainer}>
+                <LogIn size={20} color={Colors.text.placeholder} style={styles.icon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter 6-digit OTP"
+                  placeholderTextColor={Colors.text.placeholder}
+                  keyboardType="number-pad"
+                  value={otp}
+                  onChangeText={setOtp}
+                  maxLength={6}
+                />
+              </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleVerifyOtp}>
-              <Text style={styles.buttonText}>Verify OTP</Text>
+              {sentOtp && <Text style={styles.hint}>Demo OTP: {sentOtp}</Text>}
+
+              <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp}>
+                <Text style={styles.primaryButtonText}>Verify & Login</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setShowOtp(false)} style={styles.textButton}>
+                <Text style={styles.textButtonLabel}>Change Phone Number</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: '#DB4437' }]} // Google Red
+              onPress={() => googlePromptAsync()}
+              disabled={!googleRequest}
+            >
+              {/* Using generic icon/text as we don't have SVGs handy, Lucide icons are great */}
+              <Chrome size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.resendButton}
-              onPress={handleSendOtp}
+              style={[styles.socialButton, { backgroundColor: '#4267B2' }]} // Facebook Blue
+              onPress={() => fbPromptAsync()}
+              disabled={!fbRequest}
             >
-              <Text style={styles.resendText}>Resend OTP</Text>
+              <FacebookIcon size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.socialButtonText}>Facebook</Text>
             </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </View>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
-    backgroundColor: '#007AFF',
-    padding: 30,
-    paddingTop: 60,
+    height: 300,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+  },
+  headerGradient: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
+    paddingBottom: 40,
+  },
+  logoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 15,
+    backgroundColor: Colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    ...Theme.shadows.medium,
+  },
+  logoText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.primary,
   },
   title: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    color: Colors.text.primary,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
-    opacity: 0.9,
+    color: Colors.text.primary,
+    opacity: 0.8,
   },
-  form: {
-    padding: 20,
+  formCard: {
+    backgroundColor: Colors.surface,
+    marginHorizontal: Theme.spacing.lg,
+    marginTop: -40,
+    borderRadius: Theme.borderRadius.lg,
+    padding: Theme.spacing.lg,
+    ...Theme.shadows.large,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.text.primary,
     marginBottom: 8,
   },
+  instructionText: {
+    fontSize: 14,
+    color: Colors.text.secondary,
+    marginBottom: 24,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: Theme.borderRadius.md,
+    paddingHorizontal: Theme.spacing.md,
+    height: 50,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  icon: {
+    marginRight: 12,
+  },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 15,
+    flex: 1,
     fontSize: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    color: Colors.text.primary,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 15,
+  primaryButton: {
+    backgroundColor: Colors.secondary,
+    height: 50,
+    borderRadius: Theme.borderRadius.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'center',
+    marginTop: 8,
+    ...Theme.shadows.small,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  primaryButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.primary, // Yellow text on black button
   },
-  resendButton: {
+  textButton: {
+    marginTop: 16,
     alignItems: 'center',
-    padding: 10,
   },
-  resendText: {
-    color: '#007AFF',
-    fontSize: 16,
+  textButtonLabel: {
+    color: Colors.text.secondary,
+    fontSize: 14,
   },
   hint: {
     textAlign: 'center',
-    color: '#888',
-    marginBottom: 10,
+    color: Colors.text.secondary,
+    marginBottom: 12,
+    fontSize: 12,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: Colors.text.secondary,
+    fontSize: 14,
+  },
+  socialButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    height: 44,
+    borderRadius: Theme.borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Theme.shadows.small,
+  },
+  socialButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
