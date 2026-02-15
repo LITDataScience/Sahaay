@@ -25,3 +25,11 @@ build/
 .eas/
 # google-services.json
 GoogleService-Info.plist
+
+# Large Media
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.avi
+*.AVI
