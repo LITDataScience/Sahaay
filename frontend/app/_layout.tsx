@@ -4,6 +4,7 @@ import { queryClient } from '../src/shared/api/queryClient';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import Colors from '../src/constants/Colors';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootLayoutNav() {
     const { user } = useAuth();
@@ -32,10 +33,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     return (
-        <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-                <RootLayoutNav />
-            </AuthProvider>
-        </QueryClientProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <QueryClientProvider client={queryClient}>
+                <AuthProvider>
+                    <RootLayoutNav />
+                </AuthProvider>
+            </QueryClientProvider>
+        </GestureHandlerRootView>
     );
 }
