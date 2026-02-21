@@ -5,13 +5,13 @@
 
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import Colors from '../constants/Colors';
-import Theme from '../constants/Theme';
+import { useAuth } from '../../src/context/AuthContext';
+import Colors from '../../src/constants/Colors';
+import Theme from '../../src/constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, User, HelpCircle } from 'lucide-react-native';
 
-const ProfileScreen = ({ navigation }: any) => {
+const ProfileScreen = () => {
   const { user, logout, updateProfile } = useAuth();
   const initials = useMemo(() => user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'U', [user]);
   const [name, setName] = useState(user?.name || '');

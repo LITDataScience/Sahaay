@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const CreateListingScreen = ({ navigation }: any) => {
+const CreateListingScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>

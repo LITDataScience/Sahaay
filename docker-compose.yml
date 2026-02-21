@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # Typesense Search Engine 
+  typesense:
+    image: typesense/typesense:26.0
+    container_name: sahaay-typesense
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./typesense-data:/data
+    command: '--data-dir /data --api-key=sahaay-dev-key --enable-cors'
+    environment:
+      - TYPESENSE_API_KEY=sahaay-dev-key
+      - TYPESENSE_DATA_DIR=/data
+    restart: on-failure
+
+  # Redis in-memory cache for high velocity ID generation / session caching
+  redis:
+    image: redis:7-alpine
+    container_name: sahaay-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
+    restart: on-failure
+
+  # Firebase Emulator Suite
+  # Usually spawned natively via process isolation (`firebase emulators:start`)
+  # But documented here as part of the total cluster specification.
+  firebase-emulators:
+    image: spine3/firebase-emulator:latest
+    container_name: sahaay-firebase
+    ports:
+      - "4000:4000" # UI
+      - "8080:8080" # Firestore
+      - "9099:9099" # Auth
+      - "9199:9199" # Storage
+      - "5001:5001" # Functions
+    volumes:
+      - ./firebase:/app
+    environment:
+      - FIREBASE_PROJECT=sahaay-dev
+    command: "emulators:start --project sahaay-dev"

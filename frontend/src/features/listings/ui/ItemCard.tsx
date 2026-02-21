@@ -6,8 +6,8 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MapPin, User } from 'lucide-react-native';
-import Colors from '../constants/Colors';
-import Theme from '../constants/Theme';
+import Colors from '../../../constants/Colors';
+import Theme from '../../../constants/Theme';
 
 export type Item = {
 	id: string;

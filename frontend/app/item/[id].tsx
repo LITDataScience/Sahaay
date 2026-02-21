@@ -5,9 +5,12 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const ItemDetailScreen = ({ route, navigation }: any) => {
-  const { item } = route.params;
+const ItemDetailScreen = () => {
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const item = params.itemData ? JSON.parse(params.itemData as string) : null;
 
   return (
     <ScrollView style={styles.container}>
@@ -31,7 +34,7 @@ const ItemDetailScreen = ({ route, navigation }: any) => {
 
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => navigation.navigate('Booking', { item })}
+          onPress={() => router.push({ pathname: '/booking', params: { id: item.id, itemData: params.itemData } } as any)}
         >
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
