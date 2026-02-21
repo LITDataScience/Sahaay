@@ -62,6 +62,9 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
       - name: Install Dependencies
         run: cd frontend && pnpm install
 
