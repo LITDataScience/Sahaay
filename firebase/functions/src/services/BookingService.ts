@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin';
-import { createMachine } from 'xstate';
+import { createMachine, createActor } from 'xstate';
 import { BookingRequest } from '../schemas/booking';
 
 // Define the deterministic Escrow State Machine
@@ -103,7 +103,9 @@ export class BookingService {
             const totalAmount = baseAmount + depositAmount + platformFee;
 
             // 5. Native State Machine enforcement
-            const initialState = EscrowMachine.initialState;
+            // In XState V5, machines don't have .initialState directly; we resolve the initial state using createActor
+            const actor = createActor(EscrowMachine).start();
+            const initialStatus = actor.getSnapshot().value;
 
             const bookingRef = this.db.collection('bookings').doc();
 
@@ -120,7 +122,7 @@ export class BookingService {
                 platformFee,
                 totalAmount,
                 currency: 'INR',
-                status: initialState.value, // "pending" mathematically guaranteed
+                status: initialStatus, // "pending" mathematically guaranteed
                 paymentStatus: 'pending',
                 idempotencyKey,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -129,8 +131,10 @@ export class BookingService {
 
             transaction.set(bookingRef, bookingDoc);
 
-            // 6. Transition State to awaiting_payment manually acting as the actor
-            const stateAfterIntent = EscrowMachine.transition(initialState, { type: 'payment_intent_created' });
+            // 6. Transition State to awaiting_payment manually
+            // Actor handles the transition natively in V5
+            actor.send({ type: 'payment_intent_created' });
+            const stateAfterIntent = actor.getSnapshot().value;
 
             const paymentRef = this.db.collection('payments').doc();
             transaction.set(paymentRef, {
@@ -141,7 +145,7 @@ export class BookingService {
                 amount: totalAmount,
                 currency: 'INR',
                 method: 'upi_intent',
-                status: stateAfterIntent.value, // "awaiting_payment"
+                status: stateAfterIntent, // "awaiting_payment"
                 escrow: true,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -151,7 +155,7 @@ export class BookingService {
             transaction.set(idempotencyRef, {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent.value,
+                status: stateAfterIntent,
                 totalAmount,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
@@ -159,7 +163,7 @@ export class BookingService {
             return {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent.value, // Will type-cast into the router natively
+                status: stateAfterIntent, // Will type-cast into the router natively
                 totalAmount
             };
         });

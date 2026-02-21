@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookingService = exports.EscrowMachine = void 0;
 const admin = __importStar(require("firebase-admin"));
@@ -118,7 +128,9 @@ class BookingService {
             const platformFee = baseAmount * 0.10;
             const totalAmount = baseAmount + depositAmount + platformFee;
             // 5. Native State Machine enforcement
-            const initialState = exports.EscrowMachine.initialState;
+            // In XState V5, machines don't have .initialState directly; we resolve the initial state using createActor
+            const actor = (0, xstate_1.createActor)(exports.EscrowMachine).start();
+            const initialStatus = actor.getSnapshot().value;
             const bookingRef = this.db.collection('bookings').doc();
             const bookingDoc = {
                 type: 'item',
@@ -133,15 +145,17 @@ class BookingService {
                 platformFee,
                 totalAmount,
                 currency: 'INR',
-                status: initialState.value,
+                status: initialStatus, // "pending" mathematically guaranteed
                 paymentStatus: 'pending',
                 idempotencyKey,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             };
             transaction.set(bookingRef, bookingDoc);
-            // 6. Transition State to awaiting_payment manually acting as the actor
-            const stateAfterIntent = exports.EscrowMachine.transition(initialState, { type: 'payment_intent_created' });
+            // 6. Transition State to awaiting_payment manually
+            // Actor handles the transition natively in V5
+            actor.send({ type: 'payment_intent_created' });
+            const stateAfterIntent = actor.getSnapshot().value;
             const paymentRef = this.db.collection('payments').doc();
             transaction.set(paymentRef, {
                 bookingType: 'item',
@@ -151,7 +165,7 @@ class BookingService {
                 amount: totalAmount,
                 currency: 'INR',
                 method: 'upi_intent',
-                status: stateAfterIntent.value,
+                status: stateAfterIntent, // "awaiting_payment"
                 escrow: true,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -160,14 +174,14 @@ class BookingService {
             transaction.set(idempotencyRef, {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent.value,
+                status: stateAfterIntent,
                 totalAmount,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
             return {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent.value,
+                status: stateAfterIntent, // Will type-cast into the router natively
                 totalAmount
             };
         });
