@@ -4,25 +4,31 @@
 // SPDX-Header-End
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus } from 'lucide-react-native';
-import SearchBar from '../components/SearchBar';
-import CategoryChips from '../components/CategoryChips';
-import ItemCard, { Item } from '../components/ItemCard';
-import { categories as categoriesData, searchItems } from '../services/mockData';
-import Colors from '../constants/Colors';
-import Theme from '../constants/Theme';
+import SearchBar from '../../src/shared/ui/SearchBar';
+import CategoryChips from '../../src/features/listings/ui/CategoryChips';
+import ItemCard, { Item } from '../../src/features/listings/ui/ItemCard';
+import { categories as categoriesData } from '../../src/services/mockData';
+import { useTypesenseSearch } from '../../src/shared/api/useTypesenseSearch';
+import Colors from '../../src/constants/Colors';
+import Theme from '../../src/constants/Theme';
+import { useRouter } from 'expo-router';
 
-const HomeScreen = ({ navigation }: any) => {
+const HomeScreen = () => {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const data = useMemo(() => searchItems(query, category), [query, category]);
+
+  const { data = [], isLoading } = useTypesenseSearch(query, category);
+
   const { width } = useWindowDimensions();
   const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
 
   const renderItem = ({ item }: { item: Item }) => (
-    <ItemCard item={item} onPress={() => navigation.navigate('ItemDetail', { item })} />
+    <ItemCard item={item} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, itemData: JSON.stringify(item) } } as any)} />
   );
 
   return (
@@ -52,19 +58,21 @@ const HomeScreen = ({ navigation }: any) => {
           <CategoryChips categories={categoriesData} selected={category} onSelect={setCategory} />
         </View>
 
-        <FlatList
+        <FlashList
           data={data}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
+          renderItem={renderItem as any}
+          keyExtractor={(item: any) => item.id}
           contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}
           showsVerticalScrollIndicator={false}
           numColumns={numColumns}
+          // @ts-ignore - The package types do not correctly export the intrinsic FlatList props.
+          estimatedItemSize={250}
         />
       </View>
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('CreateListing')}
+        onPress={() => router.push('/create' as any)}
         activeOpacity={0.8}
       >
         <Plus size={32} color={Colors.text.primary} />

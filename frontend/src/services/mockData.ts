@@ -3,7 +3,7 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import { Item } from '../components/ItemCard';
+import { Item } from '../features/listings/ui/ItemCard';
 
 export const categories = ['All', 'Electronics', 'Tools', 'Appliances', 'Fashion', 'Sports'];
 

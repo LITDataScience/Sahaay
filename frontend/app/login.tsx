@@ -16,9 +16,9 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import Colors from '../constants/Colors';
-import Theme from '../constants/Theme';
+import { useAuth } from '../src/context/AuthContext';
+import Colors from '../src/constants/Colors';
+import Theme from '../src/constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -27,7 +27,7 @@ import { LogIn, Phone, ArrowRight, Chrome, Facebook as FacebookIcon } from 'luci
 
 WebBrowser.maybeCompleteAuthSession();
 
-const LoginScreen = ({ navigation }: any) => {
+const LoginScreen = () => {
   const { loginWithPhoneOtp } = useAuth();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');

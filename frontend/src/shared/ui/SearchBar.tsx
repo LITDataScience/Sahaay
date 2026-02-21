@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Search } from 'lucide-react-native';
-import Colors from '../constants/Colors';
-import Theme from '../constants/Theme';
+import Colors from '../../constants/Colors';
+import Theme from '../../constants/Theme';
 
 type Props = {
 	placeholder?: string;

@@ -5,9 +5,12 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const BookingScreen = ({ route, navigation }: any) => {
-  const { item } = route.params || {};
+const BookingScreen = () => {
+  const params = useLocalSearchParams();
+  const router = useRouter();
+  const item = params.itemData ? JSON.parse(params.itemData as string) : null;
 
   return (
     <View style={styles.container}>
@@ -29,7 +32,7 @@ const BookingScreen = ({ route, navigation }: any) => {
           <Text style={styles.bookButtonText}>Confirm Booking</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>

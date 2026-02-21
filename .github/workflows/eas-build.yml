@@ -1,43 +1,66 @@
-name: EAS Build
+name: Zero-Trust EAS Build Gate
 
 on:
+  pull_request:
+    branches: [ "main" ]
   push:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/**'
+    branches: [ "main" ]
 
 jobs:
-  build:
-    name: Build Android Preview
+  lint-and-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-
     steps:
-      - name: 🏗 Setup repo
-        uses: actions/checkout@v3
-
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-
-      - name: 🏗 Setup Node
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-          cache: 'pnpm'
+          node-version: 20
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          
+      - name: Install Dependencies
+        run: |
+          cd frontend && pnpm install
+          cd ../firebase/functions && npm install
+          
+      - name: Strict Typecheck (Frontend)
+        run: cd frontend && pnpm typecheck
+        
+      - name: Strict Typecheck (Backend)
+        run: cd firebase/functions && npm run build
+        
+      - name: Unit Tests (Jest)
+        run: |
+          cd frontend && pnpm exec jest --passWithNoTests
+          
+  build:
+    name: Expo EAS Build
+    runs-on: ubuntu-latest
+    needs: [lint-and-test] # Will physically not run if tests fail
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: 📦 Install dependencies
-        run: pnpm install
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: 📦 Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
-      - name:  Build Android Preview
-        run: eas build --platform android --profile preview --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: EAS Build Preview
+        if: github.event_name == 'pull_request'
+        run: cd frontend && eas build --profile preview --platform android --non-interactive
+
+      - name: EAS Build Production
+        if: github.event_name == 'push'
+        run: cd frontend && eas build --profile production --platform all --non-interactive
