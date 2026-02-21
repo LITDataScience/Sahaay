@@ -74,4 +74,4 @@ jobs:
 
       - name: EAS Build Production
         if: github.event_name == 'push'
-        run: cd frontend && eas build --profile production --platform all --non-interactive
+        run: cd frontend && eas build --profile preview --platform android --non-interactive
