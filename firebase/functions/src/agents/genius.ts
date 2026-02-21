@@ -1,11 +1,11 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import * as cors from "cors";
+import cors from "cors";
 
 admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({ origin: true }) as any;
 
 // Initialize Gemini
 // Note: In production, use process.env.GEMINI_API_KEY

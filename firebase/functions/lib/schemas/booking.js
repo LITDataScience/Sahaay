@@ -5,7 +5,7 @@ const zod_1 = require("zod");
 // Schema for Item Booking
 exports.BookingRequestSchema = zod_1.z.object({
     itemId: zod_1.z.string().min(1, "Item ID is required"),
-    startDate: zod_1.z.string().datetime(),
+    startDate: zod_1.z.string().datetime(), // ISO 8601 strings
     endDate: zod_1.z.string().datetime(),
 });
 // Schema for Service Booking

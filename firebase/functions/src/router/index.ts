@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { z } from 'zod';
+
 import * as functions from 'firebase-functions';
 import { BookingService } from '../services/BookingService';
 import { BookingRequestSchema } from '../schemas/booking';
