@@ -15,13 +15,4 @@ export const items: Item[] = [
 	{ id: '5', title: 'Soccer Ball', price: 80, deposit: 300, image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=800&auto=format&fit=crop', owner: 'Vikas Yadav', distance: '1.2 km' },
 ];
 
-export const searchItems = (query: string, category: string): Item[] => {
-	const q = query.trim().toLowerCase();
-	return items.filter((item) => {
-		const matchesQuery = !q || item.title.toLowerCase().includes(q) || item.owner.toLowerCase().includes(q);
-		const matchesCategory = category === 'All' || category === '' || item.title.toLowerCase().includes(category.toLowerCase());
-		return matchesQuery && matchesCategory;
-	});
-};
-
 
