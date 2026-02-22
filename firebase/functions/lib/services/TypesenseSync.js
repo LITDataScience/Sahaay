@@ -19,9 +19,12 @@ const typesenseClient = new typesense_1.Client({
  * Syncs Firestore Item mutations to the Typesense cluster automatically.
  */
 class TypesenseSync {
-    static async handleItemWrite(change, context) {
+    static async handleItemWrite(event) {
         var _a;
-        const itemId = context.params.itemId;
+        const itemId = event.params.itemId;
+        const change = event.data;
+        if (!change)
+            return;
         // If the document was deleted
         if (!change.after.exists) {
             console.log(`Deleting item ${itemId} from Typesense`);
