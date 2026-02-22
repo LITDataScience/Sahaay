@@ -3,32 +3,68 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus } from 'lucide-react-native';
+import { Plus, Search, MapPin, SlidersHorizontal } from 'lucide-react-native';
 import SearchBar from '../../src/shared/ui/SearchBar';
 import CategoryChips from '../../src/features/listings/ui/CategoryChips';
 import ItemCard, { Item } from '../../src/features/listings/ui/ItemCard';
 import { categories as categoriesData } from '../../src/services/mockData';
-import { useTypesenseSearch } from '../../src/shared/api/useTypesenseSearch';
 import Colors from '../../src/constants/Colors';
 import Theme from '../../src/constants/Theme';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../src/context/AuthContext';
+import { Routes } from '../../src/types/navigation';
+import { supabase } from '../../src/lib/supabase';
 
 const HomeScreen = () => {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
-  const { data = [], isLoading } = useTypesenseSearch(query, category);
+  // Phase 12: Supabase Realtime Feed
+  const [items, setItems] = useState<Item[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchItems = async () => {
+      setIsLoading(true);
+      let q = supabase.from('items').select('*');
+      if (category !== 'All') q = q.eq('category', category);
+      if (query.length > 2) q = q.ilike('title', `%${query}%`);
+
+      const { data, error } = await q;
+
+      if (active && data) {
+        setItems(data as unknown as Item[]);
+      }
+      setIsLoading(false);
+    };
+
+    fetchItems();
+
+    // Bind Realtime Subscription to instantly remove booked items
+    const channel = supabase.channel('public:items')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+        fetchItems();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [category, query]);
 
   const { width } = useWindowDimensions();
   const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
 
   const renderItem = ({ item }: { item: Item }) => (
-    <ItemCard item={item} onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, itemData: JSON.stringify(item) } } as any)} />
+    <ItemCard item={item} onPress={() => router.push({ pathname: Routes.Dynamic.ItemDetails(item.id), params: { itemData: JSON.stringify(item) } })} />
   );
 
   return (
@@ -59,7 +95,7 @@ const HomeScreen = () => {
         </View>
 
         <FlashList
-          data={data}
+          data={items}
           renderItem={renderItem as any}
           keyExtractor={(item: any) => item.id}
           contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}

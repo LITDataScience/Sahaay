@@ -1,11 +1,12 @@
 // SPDX-Header-Start
 // SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-// © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
+// © 2026 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Routes } from '../../src/types/navigation';
 
 const ItemDetailScreen = () => {
   const params = useLocalSearchParams();
@@ -34,7 +35,7 @@ const ItemDetailScreen = () => {
 
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => router.push({ pathname: '/booking', params: { id: item.id, itemData: params.itemData } } as any)}
+          onPress={() => router.push({ pathname: Routes.Modals.Booking, params: { id: item.id, itemData: params.itemData } })}
         >
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
@@ -110,5 +111,3 @@ const styles = StyleSheet.create({
 });
 
 export default ItemDetailScreen;
-
-
