@@ -35,7 +35,7 @@ const ItemDetailScreen = () => {
 
         <TouchableOpacity
           style={styles.bookButton}
-          onPress={() => router.push({ pathname: Routes.Modals.Booking, params: { id: item.id, itemData: params.itemData } })}
+          onPress={() => router.push({ pathname: Routes.Modals.Booking as any, params: { id: item.id, itemData: params.itemData } })}
         >
           <Text style={styles.bookButtonText}>Book Now</Text>
         </TouchableOpacity>
