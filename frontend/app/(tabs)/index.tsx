@@ -64,7 +64,7 @@ const HomeScreen = () => {
   const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
 
   const renderItem = ({ item }: { item: Item }) => (
-    <ItemCard item={item} onPress={() => router.push({ pathname: Routes.Dynamic.ItemDetails(item.id), params: { itemData: JSON.stringify(item) } })} />
+    <ItemCard item={item} onPress={() => router.push({ pathname: Routes.Dynamic.ItemDetails(item.id) as any, params: { itemData: JSON.stringify(item) } })} />
   );
 
   return (
