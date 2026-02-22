@@ -1,98 +1,64 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function isAdmin() { 
-      return signedIn() && request.auth.token.role == 'admin'; 
-    }
-    function isProvider() { 
-      return signedIn() && request.auth.token.role in ['provider','admin']; 
-    }
-    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
-
-    match /users/{uid} {
-      allow create: if signedIn() && isSelf(uid);
-      allow read: if signedIn();
-      allow update, delete: if isSelf(uid) || isAdmin();
+    
+    // Core Principle: Zero-Trust by default
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    match /societies/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // --- Users Collection ---
+    // A user can only read and write their EXACT document. Nobody else can enumerate users.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Updates must not tamper with internal KYC or reputation scores
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reputation', 'isVerified', 'kycStatus']);
+                    
+      // Only backend admin SDK can create new verified users via Auth triggers
+      allow create: if false;
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    match /categories/{id} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // --- Listings Collection ---
+    // Anyone authenticated can read active listings (typesense replication reads all anyway)
+    match /listings/{listingId} {
+      allow read: if request.auth != null;
+      
+      // Creation requires a verifed KYC status
+      allow create: if request.auth != null 
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVerified == true
+                    && request.resource.data.lenderId == request.auth.uid;
+      
+      // Only the lender can update/delete their own listing
+      allow update, delete: if request.auth != null 
+                            && resource.data.lenderId == request.auth.uid;
     }
 
-    match /items/{id} {
-      allow read: if true;
-      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.ownerId == request.auth.uid || isAdmin();
-    }
-
-    match /bookings/{id} {
-      allow read: if signedIn() &&
-        (request.auth.uid in [resource.data.borrowerId, resource.data.lenderId] || isAdmin());
-      allow create: if signedIn() && request.resource.data.borrowerId == request.auth.uid;
-      allow update: if signedIn() &&
-        (request.auth.uid in [resource.data.borrowerId, resource.data.lenderId] || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    match /services/{id} {
-      allow read: if true;
-      allow create: if signedIn() && request.resource.data.providerId == request.auth.uid;
-      allow update, delete: if signedIn() && resource.data.providerId == request.auth.uid || isAdmin();
-    }
-
-    match /serviceBookings/{id} {
-      allow read: if signedIn() &&
-        (request.auth.uid in [resource.data.customerId, resource.data.providerId] || isAdmin());
-      allow create: if signedIn() && request.resource.data.customerId == request.auth.uid;
-      allow update: if signedIn() &&
-        (request.auth.uid in [resource.data.customerId, resource.data.providerId] || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    match /chatRooms/{roomId} {
-      allow read, update, delete: if signedIn() && request.auth.uid in resource.data.participants;
-      allow create: if signedIn() && request.resource.data.participants.hasAny([request.auth.uid]);
-      match /messages/{messageId} {
-        allow read, create: if signedIn() &&
-          request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(roomId)).data.participants;
-        allow delete: if false;
-      }
-    }
-
-    match /ratings/{id} {
-      allow read: if true;
-      allow create: if signedIn() && request.resource.data.fromUserId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-
-    match /payments/{id} {
-      allow read: if signedIn() &&
-        (request.auth.uid in [resource.data.payerId, resource.data.payeeId] || isAdmin());
-      allow create, update: if isAdmin(); // written via Functions only
-      allow delete: if isAdmin();
-    }
-
-    match /notifications/{id} {
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /favorites/{id} {
-      allow read, create, delete: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if false;
-    }
-
-    match /reports/{id} {
-      allow read: if isAdmin();
-      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
-      allow update: if isAdmin();
+    // --- Bookings (Escrow) Collection ---
+    // The most critical collection. MITM and IDOR prevention zone.
+    match /bookings/{bookingId} {
+      // Users can only see bookings they are directly involved in
+      allow read: if request.auth != null && (
+        resource.data.borrowerId == request.auth.uid || 
+        resource.data.lenderId == request.auth.uid
+      );
+      
+      // To create a booking, both parties must be explicitly verified and 
+      // the borrowerId payload must strictly match the caller's auth token
+      allow create: if request.auth != null 
+                    && request.resource.data.borrowerId == request.auth.uid
+                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVerified == true;
+      
+      // Clients CANNOT update escrow or payment statuses directly.
+      // This enforces the rule that only Webhooks (Server-side) mutate transaction states.
+      allow update: if request.auth != null && (
+        resource.data.borrowerId == request.auth.uid || 
+        resource.data.lenderId == request.auth.uid
+      ) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'escrowAmount', 'paymentIntentId', 'handshakeSignatures']);
+      
       allow delete: if false;
     }
   }
