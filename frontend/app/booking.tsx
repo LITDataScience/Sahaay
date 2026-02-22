@@ -4,13 +4,24 @@
 // SPDX-Header-End
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext';
+import { AMLGraphService } from '../src/services/AMLGraphService';
+import { useMachine } from '@xstate/react';
+import { escrowMachine } from '../src/machines/escrowMachine';
+import { Routes } from '../src/types/navigation';
 
 const BookingScreen = () => {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const item = params.itemData ? JSON.parse(params.itemData as string) : null;
+
+  // Phase 11: Bind formal escrow state machine
+  const [state, send] = useMachine(escrowMachine);
+
+  const isProcessing = state.matches('awaiting_payment') || state.matches('funding_escrow');
 
   return (
     <View style={styles.container}>
@@ -28,8 +39,55 @@ const BookingScreen = () => {
           <Text style={styles.totalText}>Total: ₹2,500</Text>
         </View>
 
-        <TouchableOpacity style={styles.bookButton}>
-          <Text style={styles.bookButtonText}>Confirm Booking</Text>
+        <TouchableOpacity
+          style={[styles.bookButton, isProcessing && { backgroundColor: '#9e9e9e' }]}
+          onPress={async () => {
+            if (!user) return;
+
+            const lenderId = item?.lenderId || 'LENDER_MOCK_123';
+            const amount = item?.price || 500;
+            const bookingId = `BOOK-${Date.now()}`;
+
+            // Dispatch formal state transition to initiate P2P Handshake
+            send({
+              type: 'INITIATE_BOOKING',
+              bookingId,
+              lenderId,
+              borrowerId: user.id,
+              amount
+            });
+
+            // Transition to funding
+            send({ type: 'PAYMENT_STARTED' });
+
+            // Phase 14: AML Structural Velocity Interdiction
+            const isFlagged = await AMLGraphService.evaluateVelocityGraph(lenderId, user.id, amount);
+
+            if (isFlagged) {
+              send({ type: 'PAYMENT_FAILED', error: 'AML_VELOCITY_VIOLATION' });
+              Alert.alert(
+                'Transaction Blocked (AML)',
+                'Our security systems have flagged this transaction as a high-velocity structural risk (Circular Renting Pattern). It has been frozen and reported to the Financial Intelligence Unit.',
+                [{ text: 'Dismiss', style: 'cancel' }]
+              );
+              return;
+            }
+
+            // Secure Gateway Emulation
+            setTimeout(() => {
+              send({ type: 'PAYMENT_CONFIRMED' });
+              Alert.alert('Payment Verified', 'Escrow funded successfully. Proceed to meeting point.', [
+                { text: 'View Digital Handshake', onPress: () => router.replace(Routes.Modals.Handshake) }
+              ]);
+            }, 1000);
+          }}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.bookButtonText}>Confirm Booking & Pay</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>

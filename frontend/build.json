@@ -1,0 +1,51 @@
+{
+  "id": "d95334c4-7dc7-4149-94e7-da7e00f177be",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "UNKNOWN_ERROR",
+    "message": "Unknown error. See logs of the Bundle JavaScript build phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019c8068-1ba3-7d76-a018-37d9b0eab0c3",
+    "hash": "eaea099f1c6a319107683d1f1083ae6179ad6fe3"
+  },
+  "initiatingActor": {
+    "id": "e8d62cab-afeb-4e98-afec-fc2589a7bbdc",
+    "displayName": "shivshaktikadas"
+  },
+  "logFiles": [
+    "https://job-logs.eascdn.net/production/d95334c4-7dc7-4149-94e7-da7e00f177be/1771687010130-9ee6f339-ff68-436a-b40b-92fa67654bff.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260221%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260221T152522Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=067a9792df57d0ebcf4018c8cdb5d9ea8734b8a920617580d1dfa78591f92e419e2ccde4cfd60d9bb237c4fc044db30961bf56eb3bf7e45b7a4762f0a2e60f80f34c224d3d5da4f6478f4c42b3da0cf14fb90dc954ba3a3ba654ad400ca654fd8f520a51008afd8c97ca6c03a39d52557bd1db403516a500a288d9e4f36c24e1c47fede72805adb6a90ff42179887fc738db6b0c22aee4b1b07fb6e354778799d18477ba50551bc9c358d86de4ea962522613e37fe2cfea564dbdf1197209522a54127194288df3de35a0a6608f5780962fe41c73eb8e5ce970997e976e1375e43c8872bf6a55fb945f836e6cdd53bb3da541106cfb3800a74ae84e0ba6e5772",
+    "https://job-logs.eascdn.net/production/d95334c4-7dc7-4149-94e7-da7e00f177be/1771687020191-692376cb-f17b-4228-9fd8-c505f1c613bb.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260221%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260221T152522Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=191d34948a9466963fe9c035810d5a69a6b2127f143ca5d50a247f7c696875e2f534612b11ac0ca9cecdce99bbeaa0529c026d53783af398dbd23a92bec2b443487236f429d4aa9252cf96b24dcc04d28c9bfe8b72a863abcaa2efa2dca652bb67ba1e072b32be5576542fe663b41f4b9697ae223d116064e328b5da484bce22613b15cda5536484cf4637539d96d6b289bd71497e264e7853b7eeb1cdeb45a9aadfcc4051152ccbbf7637fc7f069f51608460b8c4e57de8f5cefc46ba1956233d7c744e6e5388979c8e73c42c43f0d622ad47e0a7768fd86efe59f35871c3e9ee61bf554074b2b26dcbb7fec325a4315f7e1364faae2fe9f911ad474c788101",
+    "https://job-logs.eascdn.net/production/d95334c4-7dc7-4149-94e7-da7e00f177be/1771687020411-f269fbbf-51e9-4e79-9254-6d8dc78df59f.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260221%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260221T152522Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=498e90ea3570f103c764ef79968456ffd778da2fd86b9f2f9e24c61e3d938f58d7e47ba57ce6f4d6e27bd8c66b82f522a82e92387dcec506db4ceebe5b2f4084842d439b8fa8ea34839a2676ed064950e951515fdf091cf1a2aef1dedb3eca75195a1ee82a5a7e976d7488b95e30131d2099dc12aa8e92da25f551a085683e85ab04f22c7eca10818045f1cdee51878deb5b4136f764fcedbbeaaf008a9cf67b7abee219a8e821ee5ed4a55574ed334e9b1ec601f7a2e22a65fc0773b44c8b22b84c18f9cf6b5445c5e438c7946bd89e867638a6f6d950f18cc0372f3a7bff1f7d58bfb3f64eb7d96022798252010bc66ca7e28d9cd5e8b8f9efb87e12303039",
+    "https://job-logs.eascdn.net/production/d95334c4-7dc7-4149-94e7-da7e00f177be/1771687020597-29c526f5-6f11-4226-88be-74750b613fe8.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260221%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260221T152522Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=0ab7b4250b4ec9e15839334afd38176186db494e63646d3fb5c38c181691f306d4ee73b76feeb7b0f5c9c3bfc05b2b12d04b748240581c09a5d8faa30e2588de2a089abd5dbff62414e922d7750c04ff8acf3356ae364c931d5ad1d80931865563cba7af985c6ddb1d765880d78f8a1081ae950884d774ce71b52b425de5771e11d1f453aef038755188a4d067548f8a05d636897c935dc2ee1e7c5b1df10dfdb2dbb606cc8f30d6065ac1a83b2f6dec779d829f800a69df4449773af9e45638153c26e9f70a8d62f1f863be301c18dbf5c92af1e62fae3b27eaad79711107e4bf9c7503dfa75056462bfe41ea3303304ebea6ca50c5e2171a474b451465e4c3"
+  ],
+  "project": {
+    "id": "58f0490c-4bed-4042-bff6-beef25684e68",
+    "name": "SAHAAY",
+    "slug": "sahaay",
+    "ownerAccount": {
+      "id": "8b855a85-ab43-42cb-81da-8edf09062ed6",
+      "name": "shivshaktidhaam"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "preview",
+  "sdkVersion": "54.0.0",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "4",
+  "gitCommitHash": "f0cffb48b95962d8ef935256f234ab4b3f263351",
+  "gitCommitMessage": "fix(frontend): inject reanimated babel plugin and gesture handler root view to prevent instant UI thread crash on APK launch",
+  "priority": "NORMAL",
+  "createdAt": "2026-02-21T15:16:49.843Z",
+  "updatedAt": "2026-02-21T15:18:32.397Z",
+  "completedAt": "2026-02-21T15:18:20.699Z",
+  "expirationDate": "2026-03-07T15:16:49.894Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 165,
+    "buildQueueTime": 53905,
+    "buildDuration": 36480
+  }
+}

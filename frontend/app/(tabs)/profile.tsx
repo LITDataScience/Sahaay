@@ -9,9 +9,12 @@ import { useAuth } from '../../src/context/AuthContext';
 import Colors from '../../src/constants/Colors';
 import Theme from '../../src/constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, User, HelpCircle } from 'lucide-react-native';
+import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, HelpCircle, ShieldAlert, ShieldCheck, Handshake } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Routes } from '../../src/types/navigation';
 
 const ProfileScreen = () => {
+  const router = useRouter();
   const { user, logout, updateProfile } = useAuth();
   const initials = useMemo(() => user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'U', [user]);
   const [name, setName] = useState(user?.name || '');
@@ -26,6 +29,7 @@ const ProfileScreen = () => {
   const menuItems = [
     { icon: List, label: 'My Listings', onPress: () => { } },
     { icon: ShoppingBag, label: 'My Bookings', onPress: () => { } },
+    { icon: Handshake, label: 'P2P Escrow Handover', onPress: () => router.push(Routes.Modals.Handshake) },
     { icon: Heart, label: 'My Reviews', onPress: () => { } },
     { icon: Settings, label: 'Settings', onPress: () => { } },
     { icon: HelpCircle, label: 'Support', onPress: () => { } },
@@ -69,6 +73,37 @@ const ProfileScreen = () => {
             </View>
           </View>
         </LinearGradient>
+      </View>
+
+      {/* KYC Verification Banner */}
+      <View style={styles.verificationContainer}>
+        {user?.isVerified ? (
+          <View style={[styles.verificationCard, styles.verifiedCard]}>
+            <View style={styles.verificationIcon}>
+              <ShieldCheck size={24} color="#2e7d32" />
+            </View>
+            <View style={styles.verificationTextContainer}>
+              <Text style={styles.verifiedTitle}>Identity Verified</Text>
+              <Text style={styles.verifiedSubtitle}>Your account is fully trusted.</Text>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.verificationCard, styles.unverifiedCard]}
+            onPress={() => router.push(Routes.Auth.Verification)}
+          >
+            <View style={[styles.verificationIcon, { backgroundColor: 'rgba(211, 47, 47, 0.1)' }]}>
+              <ShieldAlert size={24} color="#d32f2f" />
+            </View>
+            <View style={styles.verificationTextContainer}>
+              <Text style={styles.unverifiedTitle}>Verification Pending</Text>
+              <Text style={styles.unverifiedSubtitle}>Complete KYC to borrow/lend items safely.</Text>
+            </View>
+            <View style={styles.verifyAction}>
+              <Text style={styles.verifyActionText}>Verify Now</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.content}>
@@ -223,6 +258,72 @@ const styles = StyleSheet.create({
     width: 1,
     height: '100%',
     backgroundColor: Colors.border,
+  },
+  verificationContainer: {
+    paddingHorizontal: Theme.spacing.lg,
+    marginTop: -20,
+    marginBottom: 20,
+    zIndex: 10,
+  },
+  verificationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    ...Theme.shadows.medium,
+  },
+  verifiedCard: {
+    backgroundColor: '#f1f8e9',
+    borderWidth: 1,
+    borderColor: '#c5e1a5',
+  },
+  unverifiedCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+  },
+  verificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  verificationTextContainer: {
+    flex: 1,
+  },
+  verifiedTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  verifiedSubtitle: {
+    fontSize: 12,
+    color: '#33691e',
+    marginTop: 2,
+  },
+  unverifiedTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#d32f2f',
+  },
+  unverifiedSubtitle: {
+    fontSize: 12,
+    color: Colors.text.secondary,
+    marginTop: 2,
+  },
+  verifyAction: {
+    backgroundColor: '#d32f2f',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Theme.borderRadius.sm,
+  },
+  verifyActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   content: {
     paddingHorizontal: Theme.spacing.lg,
