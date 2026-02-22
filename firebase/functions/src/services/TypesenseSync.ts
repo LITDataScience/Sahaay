@@ -1,5 +1,6 @@
 import { Client } from 'typesense';
-import * as functions from 'firebase-functions';
+import { FirestoreEvent, Change } from 'firebase-functions/v2/firestore';
+import { DocumentSnapshot } from 'firebase-admin/firestore';
 
 // Connect to the Typesense Cloud or Local Docker cluster
 // In production, fetch keys from Secret Manager
@@ -20,10 +21,11 @@ const typesenseClient = new Client({
  */
 export class TypesenseSync {
     static async handleItemWrite(
-        change: functions.Change<functions.firestore.DocumentSnapshot>,
-        context: functions.EventContext
+        event: FirestoreEvent<Change<DocumentSnapshot> | undefined, { itemId: string }>
     ) {
-        const itemId = context.params.itemId;
+        const itemId = event.params.itemId;
+        const change = event.data;
+        if (!change) return;
 
         // If the document was deleted
         if (!change.after.exists) {

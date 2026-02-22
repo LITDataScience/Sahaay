@@ -1,6 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { BookingService } from '../services/BookingService';
 import { BookingRequestSchema } from '../schemas/booking';
 
@@ -69,14 +68,16 @@ export const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 // 4. Firebase Cloud Function Adapter
-export const trpcFunction = functions.https.onCall(async (data, context) => {
+export const trpcFunction = onCall(async (request) => {
     // tRPC typically operates over HTTP, but we can bridge it over HTTPS Callables 
     // by manually invoking the router. A proper production setup uses trpc-express adapter or similar.
     // For this blueprint, we demonstrate the architectural boundary.
     const caller = appRouter.createCaller({
-        auth: context.auth ? { uid: context.auth.uid, token: context.auth.token } : undefined,
-        app: context.app
+        auth: request.auth ? { uid: request.auth.uid, token: request.auth.token } : undefined,
+        app: request.app
     });
+
+    const data = request.data as any;
 
     if (data.path === 'initiateBooking') {
         return await caller.initiateBooking(data.input);
@@ -84,5 +85,5 @@ export const trpcFunction = functions.https.onCall(async (data, context) => {
         return await caller.health();
     }
 
-    throw new functions.https.HttpsError('not-found', 'tRPC Route not mapped in Callable Edge.');
+    throw new HttpsError('not-found', 'tRPC Route not mapped in Callable Edge.');
 });
