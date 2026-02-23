@@ -20,11 +20,11 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.4.0
           
       - name: Install Dependencies
         run: |
-          cd frontend && pnpm install
+          cd frontend && pnpm install --frozen-lockfile
           cd ../firebase/functions && npm install
           
       - name: Strict Typecheck (Frontend)
@@ -54,7 +54,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10.4.0
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -66,12 +66,12 @@ jobs:
         run: npm install -g eas-cli
 
       - name: Install Dependencies
-        run: cd frontend && pnpm install
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: EAS Build Preview
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && secrets.EXPO_TOKEN != ''
         run: cd frontend && eas build --profile preview --platform android --non-interactive
 
       - name: EAS Build Production
         if: github.event_name == 'push'
-        run: cd frontend && eas build --profile preview --platform android --non-interactive
+        run: cd frontend && eas build --profile production --platform android --non-interactive
