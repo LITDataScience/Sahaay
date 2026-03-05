@@ -1,3 +1,11 @@
+# ----- Secrets & Credentials (NEVER COMMIT) -----
+**/client_secret*.json
+**/service-account*.json
+**/*credentials*.json
+**/google-services.json
+**/GoogleService-Info.plist
+appsamples/
+
 # ----- Node/JS/TS -----
 **/node_modules/
 **/.pnp

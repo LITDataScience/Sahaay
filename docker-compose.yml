@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Typesense Search Engine 
   typesense:
@@ -14,6 +12,11 @@ services:
       - TYPESENSE_API_KEY=sahaay-dev-key
       - TYPESENSE_DATA_DIR=/data
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Redis in-memory cache for high velocity ID generation / session caching
   redis:
@@ -24,10 +27,13 @@ services:
     volumes:
       - ./redis-data:/data
     restart: on-failure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # Firebase Emulator Suite
-  # Usually spawned natively via process isolation (`firebase emulators:start`)
-  # But documented here as part of the total cluster specification.
   firebase-emulators:
     image: spine3/firebase-emulator:latest
     container_name: sahaay-firebase

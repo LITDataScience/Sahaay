@@ -11,7 +11,7 @@ import { Plus, Search, MapPin, SlidersHorizontal } from 'lucide-react-native';
 import SearchBar from '../../src/shared/ui/SearchBar';
 import CategoryChips from '../../src/features/listings/ui/CategoryChips';
 import ItemCard, { Item } from '../../src/features/listings/ui/ItemCard';
-import { categories as categoriesData } from '../../src/services/mockData';
+const categoriesData = ['All', 'Electronics', 'Tools', 'Appliances', 'Fashion', 'Sports'];
 import Colors from '../../src/constants/Colors';
 import Theme from '../../src/constants/Theme';
 import { useRouter } from 'expo-router';
