@@ -157,7 +157,7 @@ We use [TypeDoc](https://typedoc.org/) to auto-generate a complete API Reference
 
 ```bash
 # From the repository root
-pnpm docs
+pnpm run docs:generate
 ```
 
 This parses all exported functions, classes, types, and interfaces and generates structured Markdown documentation at `docs-output/`.
