@@ -1,0 +1,66 @@
+{
+    "$schema": "https://turbo.build/schema.json",
+    "tasks": {
+        "lint": {
+            "dependsOn": [],
+            "inputs": [
+                "src/**/*.ts",
+                "src/**/*.tsx",
+                ".eslintrc*"
+            ],
+            "outputs": []
+        },
+        "typecheck": {
+            "dependsOn": [],
+            "inputs": [
+                "src/**/*.ts",
+                "src/**/*.tsx",
+                "tsconfig.json"
+            ],
+            "outputs": []
+        },
+        "build": {
+            "dependsOn": [
+                "typecheck"
+            ],
+            "inputs": [
+                "src/**/*.ts",
+                "src/**/*.tsx",
+                "tsconfig.json",
+                "package.json"
+            ],
+            "outputs": [
+                "dist/**",
+                "lib/**",
+                ".expo/**"
+            ]
+        },
+        "test": {
+            "dependsOn": [
+                "typecheck"
+            ],
+            "inputs": [
+                "src/**/*.ts",
+                "src/**/*.tsx",
+                "**/*.test.ts",
+                "**/*.test.tsx"
+            ],
+            "outputs": [
+                "coverage/**"
+            ]
+        },
+        "docs": {
+            "dependsOn": [
+                "typecheck"
+            ],
+            "inputs": [
+                "src/**/*.ts",
+                "src/**/*.tsx",
+                "typedoc.json"
+            ],
+            "outputs": [
+                "docs-output/**"
+            ]
+        }
+    }
+}

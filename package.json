@@ -1,6 +1,14 @@
 {
   "name": "sahaay-monorepo",
   "private": true,
+  "scripts": {
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch"
+  },
   "pnpm": {
     "overrides": {
       "glob": "^10.5.0",
@@ -21,6 +29,9 @@
   "devDependencies": {
     "eslint": "^10.0.0",
     "eslint-config-expo": "^10.0.0",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "turbo": "^2.8.13",
+    "typedoc": "^0.28.17",
+    "typedoc-plugin-markdown": "^4.10.0"
   }
 }
