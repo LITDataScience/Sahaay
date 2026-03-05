@@ -1,412 +1,127 @@
-<!-- SPDX-Header-Start -->
-SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-© 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
-<!-- SPDX-Header-End -->
+# Sahaay V3 — API Reference (tRPC)
 
-# Sahaay API Specification
+**Date:** March 2026  
+**Protocol:** tRPC over Firebase Cloud Functions  
+**Validation:** Zod strict schema enforcement
+
+---
 
 ## Overview
 
-Sahaay uses RESTful API design with JSON responses. All endpoints require authentication except for signup/verification.
+Sahaay uses **tRPC** as its sole API layer. There are no REST endpoints. All client-server communication is type-safe and validated at compile time.
+
+The tRPC router is exported as a Firebase Cloud Function at `firebase/functions/src/router/index.ts`.
+
+---
 
 ## Authentication
 
-All authenticated requests must include the `Authorization` header:
-```
-Authorization: Bearer <jwt_token>
-```
+All tRPC procedures require Firebase Authentication. The `context` object carries the authenticated `uid` and is verified via Firebase AppCheck middleware.
 
-## Base URL
-```
-https://api.Sahaay.com/v1
-```
+---
 
-## Response Format
+## Procedures
 
-### Success Response
-```json
+### `booking.create`
+
+Creates a new item booking with XState-driven escrow.
+
+**Input Schema (`BookingRequestSchema`):**
+
+```typescript
 {
-  "success": true,
-  "data": { ... },
-  "message": "Operation successful",
-  "timestamp": "2024-01-01T00:00:00Z"
+  itemId: string;           // Firestore document ID of the item
+  startDate: string;        // ISO 8601 date string
+  endDate: string;          // ISO 8601 date string
+  idempotencyKey?: string;  // Client-generated key to prevent duplicate charges
 }
 ```
 
-### Error Response
-```json
+**Output:**
+
+```typescript
 {
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input parameters",
-    "details": { ... }
-  },
-  "timestamp": "2024-01-01T00:00:00Z"
+  bookingId: string;
+  paymentId: string;
+  status: "awaiting_payment";   // XState-guaranteed initial state
+  totalAmount: number;          // baseAmount + deposit + platformFee (10%)
 }
 ```
 
-## Endpoints
+**Business Rules:**
 
-### Authentication
+- Item must exist and have `status: 'active'`
+- Borrower cannot book their own item
+- End date must be after start date
+- Idempotency key prevents duplicate transactions on network retries
 
-#### POST /auth/signup
-Register a new user with phone number.
+---
 
-**Request:**
-```json
+### `items.search` (via Typesense)
+
+Item search is handled client-side via the Typesense JS client (`useTypesenseSearch.ts`), not through tRPC. Typesense provides sub-10ms typo-tolerant search with geospatial filtering.
+
+**Client-Side Usage:**
+
+```typescript
+const { data, isLoading } = useTypesenseSearch({
+  query: "power drill",
+  filterBy: "category:Tools && location:(48.85, 2.35, 5 km)"
+});
+```
+
+---
+
+### `genius.chat`
+
+AI-powered assistant using Gemini integration.
+
+**Input:**
+
+```typescript
 {
-  "phone": "9876543210",
-  "name": "John Doe",
-  "societyId": "optional-society-uuid"
+  message: string;        // User's message to the AI assistant
+  conversationId?: string; // Optional conversation thread ID
 }
 ```
 
-**Response:**
-```json
+**Output:**
+
+```typescript
 {
-  "success": true,
-  "data": {
-    "tempUserId": "uuid",
-    "otpSent": true
-  }
+  response: string;       // AI-generated response
+  conversationId: string; // Thread identifier for follow-ups
 }
 ```
 
-#### POST /auth/verify
-Verify OTP and complete registration.
+---
 
-**Request:**
-```json
-{
-  "tempUserId": "uuid",
-  "otp": "123456"
-}
-```
+## Firestore Triggers (Automatic)
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "uuid",
-      "phone": "9876543210",
-      "name": "John Doe",
-      "verified": true
-    },
-    "token": "jwt_token",
-    "refreshToken": "refresh_token"
-  }
-}
-```
+These Cloud Functions trigger automatically on Firestore document events:
 
-### Users
+| Trigger | Event | Action |
+|---------|-------|--------|
+| `onItemWrite` | `items/{itemId}` written | Syncs item data to Typesense search index |
+| `onItemCreated` | `items/{itemId}` created | Runs AI content moderation; flags unsafe listings |
+| `onUserCreate` | User account created | Creates user profile document with default reputation |
 
-#### GET /users/me
-Get current user profile.
+---
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "phone": "9876543210",
-    "name": "John Doe",
-    "societyId": "society-uuid",
-    "reputationScore": 4.8,
-    "verified": true,
-    "createdAt": "2024-01-01T00:00:00Z"
-  }
-}
-```
+## Error Handling
 
-#### PATCH /users/me
-Update user profile.
+All tRPC procedures throw typed errors:
 
-**Request:**
-```json
-{
-  "name": "John Updated",
-  "societyId": "new-society-uuid"
-}
-```
+| Code | Meaning |
+|------|---------|
+| `UNAUTHENTICATED` | No valid Firebase Auth token |
+| `FAILED_PRECONDITION` | AppCheck verification failed |
+| `INVALID_ARGUMENT` | Zod schema validation failed |
+| `INTERNAL` | Unexpected server error |
+| `NOT_FOUND` | Referenced document does not exist |
 
-### Items
+---
 
-#### GET /items
-Get paginated list of available items.
+## Rate Limiting
 
-**Query Parameters:**
-- `lat`, `lng`: Coordinates for location-based search
-- `radius`: Search radius in kilometers (default: 2)
-- `societyId`: Filter by society
-- `categoryId`: Filter by category
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 20)
-- `search`: Search query
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "uuid",
-        "title": "Professional Camera",
-        "description": "Canon EOS DSLR",
-        "categoryId": 1,
-        "priceHour": 50,
-        "priceDay": 500,
-        "deposit": 5000,
-        "location": { "lat": 28.6139, "lng": 77.2090 },
-        "photos": ["url1", "url2"],
-        "availability": ["weekdays", "weekends"],
-        "owner": {
-          "id": "uuid",
-          "name": "John Doe",
-          "reputationScore": 4.8
-        },
-        "distance": 1.2,
-        "createdAt": "2024-01-01T00:00:00Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 150,
-      "pages": 8
-    }
-  }
-}
-```
-
-#### POST /items
-Create a new item listing.
-
-**Request:**
-```json
-{
-  "title": "Professional Camera",
-  "description": "Canon EOS DSLR in excellent condition",
-  "categoryId": 1,
-  "priceHour": 50,
-  "priceDay": 500,
-  "deposit": 5000,
-  "location": { "lat": 28.6139, "lng": 77.2090 },
-  "photos": ["photo_url_1", "photo_url_2"],
-  "availability": ["weekdays", "weekends"]
-}
-```
-
-#### GET /items/{id}
-Get detailed item information.
-
-#### PATCH /items/{id}
-Update item listing (owner only).
-
-#### DELETE /items/{id}
-Remove item listing (owner only).
-
-### Bookings
-
-#### POST /bookings
-Create a new booking request.
-
-**Request:**
-```json
-{
-  "itemId": "item-uuid",
-  "startTime": "2024-01-15T10:00:00Z",
-  "endTime": "2024-01-17T10:00:00Z",
-  "pickupOption": "self_pickup",
-  "message": "Optional message to owner"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "booking": {
-      "id": "uuid",
-      "itemId": "item-uuid",
-      "borrowerId": "borrower-uuid",
-      "lenderId": "lender-uuid",
-      "startTime": "2024-01-15T10:00:00Z",
-      "endTime": "2024-01-17T10:00:00Z",
-      "status": "requested",
-      "depositHeld": false,
-      "totalAmount": 1500,
-      "createdAt": "2024-01-01T00:00:00Z"
-    },
-    "paymentUrl": "upi://pay?pa=...&am=1500"
-  }
-}
-```
-
-#### GET /bookings
-Get user's bookings (as borrower or lender).
-
-**Query Parameters:**
-- `status`: Filter by status (requested, accepted, etc.)
-- `role`: 'borrower' or 'lender'
-
-#### GET /bookings/{id}
-Get booking details.
-
-#### PATCH /bookings/{id}/accept
-Accept booking request (lender only).
-
-#### PATCH /bookings/{id}/reject
-Reject booking request (lender only).
-
-#### POST /bookings/{id}/confirm-return
-Confirm item return with photos.
-
-**Request:**
-```json
-{
-  "photos": ["return_photo_1", "return_photo_2"],
-  "condition": "excellent",
-  "notes": "Item returned in perfect condition"
-}
-```
-
-### Payments
-
-#### POST /payments/simulate
-Simulate UPI payment (development only).
-
-**Request:**
-```json
-{
-  "bookingId": "booking-uuid",
-  "amount": 1500,
-  "type": "deposit"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "paymentId": "uuid",
-    "status": "completed",
-    "transactionId": "simulated_txn_123",
-    "amount": 1500,
-    "timestamp": "2024-01-01T00:00:00Z"
-  }
-}
-```
-
-#### GET /payments/{bookingId}
-Get payment status for a booking.
-
-### Ratings
-
-#### POST /ratings
-Submit rating for completed booking.
-
-**Request:**
-```json
-{
-  "bookingId": "booking-uuid",
-  "rating": 5,
-  "comment": "Great experience! Item was in perfect condition.",
-  "asBorrower": true
-}
-```
-
-### Categories
-
-#### GET /categories
-Get all item categories.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "categories": [
-      { "id": 1, "name": "Electronics" },
-      { "id": 2, "name": "Tools" },
-      { "id": 3, "name": "Appliances" },
-      { "id": 4, "name": "Books" }
-    ]
-  }
-}
-```
-
-### Societies
-
-#### GET /societies
-Get nearby societies.
-
-**Query Parameters:**
-- `lat`, `lng`: Coordinates
-- `radius`: Search radius
-
-#### GET /societies/{id}
-Get society details.
-
-## Error Codes
-
-- `VALIDATION_ERROR`: Invalid input parameters
-- `AUTHENTICATION_ERROR`: Invalid or missing token
-- `AUTHORIZATION_ERROR`: Insufficient permissions
-- `NOT_FOUND_ERROR`: Resource not found
-- `CONFLICT_ERROR`: Resource conflict (e.g., double booking)
-- `PAYMENT_ERROR`: Payment processing failed
-- `INTERNAL_ERROR`: Server error
-
-## Rate Limits
-
-- Authentication endpoints: 10 requests per minute
-- Item listing/search: 100 requests per minute
-- Booking operations: 50 requests per minute
-- General endpoints: 200 requests per minute
-
-## Webhooks
-
-### Payment Webhook
-```
-POST /webhooks/payment
-```
-
-Called when payment status changes:
-```json
-{
-  "event": "payment.completed",
-  "bookingId": "uuid",
-  "paymentId": "uuid",
-  "status": "completed",
-  "amount": 1500
-}
-```
-
-## SDKs & Tools
-
-### Postman Collection
-Import `docs/Sahaay_API.postman_collection.json` for testing.
-
-### cURL Examples
-
-#### Signup
-```bash
-curl -X POST https://api.Sahaay.com/v1/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"phone": "9876543210", "name": "John Doe"}'
-```
-
-#### Get Items
-```bash
-curl -X GET "https://api.Sahaay.com/v1/items?lat=28.6139&lng=77.2090&radius=2" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-
+Firebase Cloud Functions enforce default rate limits. Custom Token Bucket rate limiting should be implemented at the tRPC middleware layer for production deployment.
