@@ -136,6 +136,59 @@ npx expo start -c
 
 Press `a` to open on a connected Android device/emulator, or scan the QR code using the Expo Go app. To view the web version, press `w`.
 
+### 5. Monorepo Commands (Turborepo)
+
+We use [Turborepo](https://turbo.build/) to orchestrate and cache commands across all workspaces. Run these from the **repository root**:
+
+```bash
+pnpm lint         # Lint all workspaces in parallel (cached)
+pnpm typecheck    # Type-check all workspaces in parallel (cached)
+pnpm build        # Build all workspaces in dependency order (cached)
+pnpm test         # Run test suites across all workspaces (cached)
+```
+
+Turborepo intelligently skips re-execution if inputs haven't changed, dramatically speeding up CI and local iteration.
+
+## Documentation Generation (TypeDoc)
+
+We use [TypeDoc](https://typedoc.org/) to auto-generate a complete API Reference from the TypeScript source code across both `frontend/` and `firebase/functions/`.
+
+### Generate Locally
+
+```bash
+# From the repository root
+pnpm docs
+```
+
+This parses all exported functions, classes, types, and interfaces and generates structured Markdown documentation at `docs-output/`.
+
+### Live Hosted Documentation (GitHub Pages)
+
+Every push to `main` automatically triggers the `.github/workflows/docs.yml` Action, which:
+
+1. Installs all monorepo dependencies
+2. Runs `pnpm docs` to generate the TypeDoc reference
+3. Deploys the output to **GitHub Pages**
+
+Once enabled, the live API Reference is available at:
+
+> **<https://litdatascience.github.io/Sahaay/>**
+
+**One-time setup:** Go to [Settings → Pages](https://github.com/LITDataScience/Sahaay/settings/pages) → Under "Source", select **"GitHub Actions"** → Save.
+
+### Downloadable Artifact
+
+After any GitHub Actions run, go to **Actions** → click the run → scroll to **"Artifacts"** → download the full `docs-output` as a ZIP.
+
+### Folder Structure: `docs/` vs `docs-output/`
+
+| Folder | Purpose | Tracked in Git? |
+|--------|---------|-----------------|
+| `docs/` | Hand-written project documentation (README, guides, legal) | ✅ Yes |
+| `docs-output/` | Auto-generated TypeDoc API reference | ❌ No (`.gitignore`'d) |
+
+These folders are intentionally kept separate. TypeDoc **completely wipes and rebuilds** its output directory on every run — merging them would destroy all hand-written documentation.
+
 ## Mobile App Features
 
 ### Core Screens
