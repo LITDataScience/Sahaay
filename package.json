@@ -6,7 +6,7 @@
     "typecheck": "turbo run typecheck",
     "build": "turbo run build",
     "test": "turbo run test",
-    "docs": "typedoc",
+    "docs:generate": "typedoc",
     "docs:watch": "typedoc --watch"
   },
   "pnpm": {
