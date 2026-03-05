@@ -1,166 +1,230 @@
-# Sahaay: Futuristic Architecture & Robustness Critique (V3: The Singularity)
+# Sahaay: Post-V3 Architectural Self-Critique (The Reckoning)
 
-**Date:** February 2026  
-**Audience:** Principal Engineering Team  
-**Objective:** A brutally rigorous, hyper-technical self-critique of the `Sahaay` startup codebase. This document evaluates the post-V2 architecture and identifies the absolute bleeding-edge gaps separating Sahaay from being a globally dominant, zero-latency, unbreakable application.
-
----
-
-## 1. The Verdict: The Foundation is Solid, but the Ceiling is Infinite
-
-In V1, Sahaay was a prototype. In V2, we executed a renaissance: integrating `WatermelonDB` for offline-first caching, decoupling the monolith into Feature-Sliced Design (FSD), deploying Gemini 1.5 Edge AI moderation, and erecting a Zero-Trust CI/CD pipeline using Detox and GitHub Actions.
-
-**However, to claim the title of "World's Most Robust and Futuristic Marketplace," V2 is merely table stakes.** A truly futuristic architecture demands sub-millisecond geospatial querying, impenetrable idempotent state machines, and deep-link routing parity.
+**Date:** March 2026  
+**Audience:** Founding Team, Principal Engineering, Investors  
+**Objective:** A forensic, file-by-file audit of the `Sahaay` repository. This document identifies every structural deficit, security vulnerability, and architectural gap that must be resolved before Sahaay can claim the title of "World's Most Robust Hyperlocal Marketplace."
 
 ---
 
-## 2. The V3 Architectural Deficits (The Final Frontier)
+## 0. The Rating (Brutal Honesty)
 
-### 2.1. The Routing Monolith (Transition to Universal Links)
-
-**Current State:** We are currently using legacy imperative `React Navigation` stacks in `App.tsx`.
-**The Fix (Futuristic Standard):**
-
-- **File-Based Routing via Expo Router:** We must migrate to Expo Router. This enables automatic deep linking (Universal Links/App Links), universal web/native parity, and deferred screen loading via Suspense boundaries.
-- **Typed Routes:** Enforce strict type safety on all navigation parameters at compile time.
-
-### 2.2. Geospatial Vector Search (The Death of Firestore Geohashes)
-
-**Current State:** Sahaay is a "hyperlocal" marketplace, but relies on native Firestore queries or archaic geohash range queries, which scale abysmally and cannot handle fuzzy text matching combined with radius checks.
-**The Fix:**
-
-- **Typesense / Algolia Sync:** We must eject complex read queries from Firestore. Integrate a dedicated **Typesense** cluster (or Meilisearch).
-- **Sub-10ms Inference:** Implement a Firebase Extension to stream Firestore mutations directly into Typesense. This unlocks typo-tolerant, geospatial vector search (e.g., "power drill within 2km") executing in <10ms.
-
-### 2.3. Idempotent State Machines for Escrow
-
-**Current State:** The `BookingService.ts` uses Firestore transactions. While atomic, a network drop between the client and server during the RPC call leaves the client uncertain of the transaction state.
-**The Fix:**
-
-- **Idempotency Keys & XState:** Introduce strict idempotency keys generated on the client for all financial mutations.
-- **Deterministic State Machines:** Refactor the Escrow logic into an **XState** state machine on the backend. This guarantees that a booking strictly transitions (`INITIATED` -> `ESCROW_HELD` -> `COMPLETED`) and mathematically prevents double-spending or race-condition exploits.
-
-### 2.4. End-to-End Type Safety (tRPC over HTTP Callables)
-
-**Current State:** We use `zod` in `index.ts` to validate callable functions, but the frontend still manually defines its payload interfaces. This creates a brittle boundary where a backend schema change won't immediately break the frontend build.
-**The Fix:**
-
-- **tRPC Integration:** Replace standard Firebase HTTPS Callables with a `tRPC` adapter. This creates an invisible, unbreakable type-safe bridge between the Node.js backend and the React Native frontend. If a backend engineer changes `BookingRequestSchema`, the frontend IDE immediately throws a red squiggly line.
-
-### 2.5. True Sync via CRDTs (Conflict-Free Replicated Data Types)
-
-**Current State:** WatermelonDB syncs via traditional timestamp-based push/pull. If a user modifies their listing offline on two different devices simultaneously, we face a merge conflict.
-**The Fix:**
-
-- **CRDT Synchronization:** Evolve the synchronization engine to use CRDTs (like Yjs or Automerge). This guarantees mathematical eventual consistency across a distributed, multi-device mesh network without a central conflict-resolution authority.
-
-- **CRDT Synchronization:** Evolve the synchronization engine to use CRDTs (like Yjs or Automerge). This guarantees mathematical eventual consistency across a distributed, multi-device mesh network without a central conflict-resolution authority.
+| Dimension | Score (out of 10) | Justification |
+|-----------|-------------------|---------------|
+| Architecture (FSD/tRPC/XState) | **8.5** | Excellent V3 paradigm. Expo Router, tRPC, XState Escrow are bleeding-edge. |
+| Security | **3.0** | **Critical secret leak in `appsamples/`.** Zero runtime hardening (RASP, FLAG_SECURE). |
+| Test Coverage | **1.0** | Virtually zero unit/integration tests exist across the entire monorepo. |
+| Documentation | **7.5** | README was overhauled. TypeDoc auto-generates AST docs. Some legacy files remain. |
+| DevOps & CI/CD | **6.0** | GitHub Actions + EAS work. GitLab CI is stale. No Docker health checks. |
+| Code Hygiene | **5.0** | Empty orphan dirs, hardcoded mock data, orphan root files. |
+| Scalability | **7.0** | Turborepo, Typesense, Docker Compose are strong. No horizontal backend scaling yet. |
+| Offline Resilience | **7.5** | WatermelonDB + CRDTs for sync. Needs conflict resolution stress-testing. |
+| **Overall** | **5.7** | The architectural vision is elite. Execution gaps and security hygiene are holding it back. |
 
 ---
 
-## 3. The Trust, Safety & Payment Architecture (The Indian Fintech Imperative)
+## 1. 🚨 CRITICAL: Secret Leak in `appsamples/`
 
-**Current State:** Sahaay relies on a rudimentary conceptual Escrow mechanism. Currently, there is an existential void regarding UPI intent deep-linking, webhook synchronization, and device-level cryptographic binding. If deployed as-is in the Indian ecosystem, Sahaay would be eviscerated by Man-in-the-Middle (MITM) attacks, callback spoofing, and chargeback fraud.
+**Finding:** The directory `appsamples/` contains a plaintext Google OAuth `client_secret` JSON file committed directly to the public repository:
 
-### 3.1. UPI Callback Spoofing & Payload Tampering
+```
+appsamples/client_secret_400664256540-20fahhlp2p0vecc1sjheohclrv4msbnu.apps.googleusercontent.com.json
+```
 
-**The Vulnerability:** Relying on client-side confirmation of UPI Intent invocations (`upi://pay?pa=...`). A hacker using a root-hidden hooking framework (like Xposed/Frida) can intercept the Android `Intent` return data to forge a `SUCCESS` status, bypassing the actual payment gateway (Razorpay/Cashfree/Setu).
-**The Fix (Zero-Trust Aggregation):**
+This file contains the full `client_id`, `project_id` (`sahaay-shivshakti-13`), `auth_uri`, and `token_uri`. This is a **P0 security incident**.
 
-- **Strict S2S Confirmation:** The client application must *never* dictate payment state. The backend must enforce asynchronous S2S (Server-to-Server) Webhook listeners validated by cryptographic signatures (HMAC-SHA256).
-- **Asynchronous Polling Mesh:** If the webhook delivery fails (network partition), the client must trigger a bounded exponential-backoff polling mechanism to the Sahaay backend, which in turn queries the Payment Gateway (PG) for the definitive atomic state.
-
-### 3.2. Hardware-Level Device Binding (Defeating App Cloning)
-
-**The Vulnerability:** Relying solely on OTP/JWTs. Indian fraudsters utilize sophisticated SMS forwarding Trojans and app cloning (Parallel Space) to clone sessions across unverified hardware, circumventing traditional auth.
 **The Fix:**
 
-- **Cryptographic Device Binding:** Bind the JWT/Auth session inextricably to the device's hardware enclave (Android KeyStore / iOS Secure Enclave). Generate an RSA KeyPair on device instantiation; all subsequent authenticated financial mutations must sign a nonce using the private key.
-- **Root/RASP Shielding:** Integrate a Runtime Application Self-Protection (RASP) layer (e.g., FreeRASP/Appdome) to instantaneously panic and lock the application state if environment hooking, rooted binaries (Magisk), or debugger attachments are detected.
-
-### 3.3. Transitive Escrow & Handover Fraud (The "Empty Box" Attack)
-
-**The Vulnerability:** Physical handover asymmetry. A borrower pays the escrow, picks up the tool, but later denies receiving it, initiating a chargeback or platform dispute. Alternatively, the lender hands over a broken item.
-**The Fix:**
-
-- **Cryptographic QR Handshake:** Enforce physical proximity via a Dynamic QR Handshake. The lender's device generates a time-based rotating QR payload (TOTP-backed). The borrower scans this inside the Sahaay app. This explicitly mints an immutable blockchain-style ledger entry proving geographical and temporal rendezvous, mathematically nullifying "item not received" claims.
-
-### 3.4. API Endpoint Hacking & IDOR Extrapolation
-
-**The Vulnerability:** Leaking Firebase configuration or insecure HTTP endpoints allowing Insecure Direct Object Reference (IDOR), where an attacker modifies `userId` payloads to drain another user's wallet or hijack listings.
-**The Fix:**
-
-- **Zero-Trust Firebase Rules:** Enforce draconian Firestore/Storage security rules where `request.auth.uid` must deterministically path-match every atomic read/write.
-- **Payload Obfuscation:** Enact robust payload schema parsing (Zod/tRPC) combined with strict rate-limiting algorithms (Token Bucket) on Firebase Cloud Functions to thwart distributed enumeration attacks.
-
-### 3.5. KYC Liveness Defeat & Synthetic Identities (Deepfakes)
-
-**The Vulnerability:** Digilocker/Aadhaar OTPs confirm document existence, but not *presense*. Fraudsters buy stolen Aadhaar databases (Synthetic IDs) and use AI driven real-time face-swap (Deepfakes) to defeat standard selfie checks, allowing them to create "Verified" mule accounts for scamming.
-**The Fix (Active Liveness):**
-
-- **Passive + Active SDKs:** Relegate basic OCR to legacy. Integrate a Tier-1 Indian biometric vendor (e.g., Hyperverge or IDfy) SDK. Enforce 'Active Liveness' checks (asking the user to read digits aloud, blink, or move their head) synchronized with an immediate Aadhaar XML match. Drop any verification returning a confidence score `< 98%`.
-
-### 3.6. Android Accessibility Service Malware (Overlay Attacks)
-
-**The Vulnerability:** The silent killer in Indian Fintech. A user inadvertently installs malware (e.g., a fake PDF reader). The malware requests Android Accessibility permissions, sitting dormant until the Sahaay app is opened. During the Escrow payment flow, the malware draws an invisible "Overlay" over the screen, silently capturing the user's UPI PIN or stealthily swapping the payee VPA address.
-**The Fix (OS-Level Hardening):**
-
-- **FLAG_SECURE & Screen-tap Biometrics:** Programmatically assert `WindowManager.LayoutParams.FLAG_SECURE` on the Android root host to blind all screen-recording and casting tools immediately upon app launch.
-- **Overlay Detection Algorithm:** Periodically query the Android `AccessibilityManager` to detect active, non-whitelisted screen readers, halting any financial transaction if an untrusted overlay is detected drawing across the app context.
-
-### 3.7. Dispute Arbitration Manipulation (The "Condition Trap")
-
-**The Vulnerability:** The QR Handshake guarantees *location*, but it doesn't guarantee *condition*. The Lender proves they handed over a drill. Two days later, the Borrower returns it and claims "the motor was already burnt out." Without cryptographic proof of state, arbitration is purely "he said, she said," leading to massive support overhead and chargeback losses.
-**The Fix (Immutable Media Hashing):**
-
-- **Pre/Post Condition Video Hashes:** Before the QR Handshake can be generated, both parties must record a mandatory 5-second 360-degree sweep of the item within the Sahaay camera UI.
-- **IPFS Staking:** The SHA-256 hash of this video is explicitly embedded into the QR Handshake payload and pinned to IPFS. If a dispute arises, arbitration is mathematically settled by comparing the IPFS artifact against the returned item.
-
-### 3.8. Micro-Escrow Money Laundering (AML Structuring)
-
-**The Vulnerability:** Bad actors use P2P rental marketplaces to clean illicit funds. Mule Account A "rents" a phantom tool from Mule Account B for ₹10,000, paying via untraceable localized mechanisms. The funds are aggregated and withdrawn, structuring deposits below the ₹50,000 PAN reporting threshold.
-**The Fix (Behavioral Velocity Graphs):**
-
-- **Graph Database Interdiction:** Deploy Neo4j or Amazon Neptune to construct real-time transaction graphs.
-- **Velocity Thresholds:** Algorithmically detect localized circular renting patterns (e.g., A rents to B, B rents to C, C rents to A). Instantly freeze accounts exhibiting high-velocity, short-duration escrow cycles lacking accompanying chat telemetry, and automatically fire Suspicious Activity Reports (SAR) to FIU-IND.
+1. **Immediately** delete this file and the `appsamples/` directory from the repository.
+2. **Rotate the credential** in the Google Cloud Console (APIs & Services → Credentials). The old secret is now permanently compromised via Git history.
+3. Run `git filter-branch` or `BFG Repo-Cleaner` to purge the file from the entire Git history.
+4. Add `appsamples/` and `*.json` client secrets to `.gitignore`.
 
 ---
 
-## 4. DevOps & DevX: The Containerized Environment
+## 2. Repository Hygiene: Dead Weight & Orphan Artifacts
 
-### 3.1. The "Works on My Machine" Paradox
+### 2.1. Empty Orphan Directories
 
-**Current State:** Developers must manually spin up the Firebase Emulator Suite and ensure Node versions match.
-**The Fix:**
+The following root-level directories are **completely empty** and serve no purpose. They are V1 ghosts:
 
-- **Dockerized DevX:** Containerize the entire local development backend using `Docker Compose`. A single `docker compose up` must spin up the Firebase Emulators, the Typesense instance, and a Redis caching layer identically for every developer.
+| Directory | Status | Action |
+|-----------|--------|--------|
+| `components/` | Empty | **DELETE** — Components live in `frontend/src/` |
+| `src/` | Empty | **DELETE** — Source lives in `frontend/src/` |
+| `tests/` | Empty | **DELETE** — Tests should live colocated in each workspace |
+
+### 2.2. Orphan Root Files
+
+| File | Issue | Action |
+|------|-------|--------|
+| `app.json` (root) | Orphaned; the real config is `frontend/app.json` | **DELETE** |
+| `sahaay.txt` (17KB) | Unstructured text dump with no clear purpose | **DELETE** or move to `docs/` as structured onboarding doc |
+| `.pylintrc` | Python linting config; no active Python code in the monorepo | **DELETE** |
+| `legal_config.json` | Appears to configure SPDX headers; no active tooling references it | **REVIEW** — integrate into `scripts/` or delete |
+
+### 2.3. Stale CI/CD Pipelines
+
+| File | Issue |
+|------|-------|
+| `.gitlab-ci.yml` | References `cd backend` (directory doesn't exist), `requirements.txt` (doesn't exist), and Python 3.11 tests (no Python code). This pipeline will **fail 100% of the time** if triggered. |
+| `.github/workflows/pylint.yml` | Runs PyLint against non-existent Python code. |
+| `.github/workflows/mirror.yml` | Untracked file sitting in the working tree. |
+
+**The Fix:** Delete `.gitlab-ci.yml` if GitHub Actions is the sole CI provider. Delete `pylint.yml`. Track or delete `mirror.yml`.
 
 ---
 
-## 4. Next Steps / V3 Action Plan
+## 3. Documentation: The Final Obsolete Fragments
 
-1. **Phase 10: The Search & Routing Paradigm (Weeks 13-14)**
-   - Rip out React Navigation and install Expo Router.
-   - Deploy Typesense and wire the Firestore replication pipeline.
+### 3.1. Legacy DSPy/MCP Documentation
 
-2. **Phase 11: The Unbreakable Engine (Weeks 15-16)**
-   - Architect XState for the Escrow system.
-   - Inject tRPC across the frontend/backend divide.
+Two documents in `docs/` reference the abandoned V1 DSPy AI Agent orchestration framework:
 
-3. **Phase 12: CRDTs & Docker DevOps (Weeks 17-18)**
-   - Dockerize the emulator suite and search indices.
-   - Refactor the WatermelonDB sync adapter to utilize CRDT logic for the Chat system.
+| File | Content | Action |
+|------|---------|--------|
+| `docs/DSPy_MCP_IMPLEMENTATION.md` | Details the old DSPy/MCP agent architecture | **DELETE** — All agent `.md` files were already purged |
+| `docs/README_DSPy_MCP.md` | README for the DSPy system | **DELETE** — Superseded by the V3 AI Service (`agents/genius.ts`) |
 
-4. **Phase 13: Fintech Fortification & Anti-Fraud Mesh (Weeks 19-20)**
-   - Wire up S2S Hash-validated Webhooks and PG Polling nodes.
-   - Implement Hardware KeyStore Device Binding and RASP obfuscation.
-   - Deploy the Cryptographic QR TOTP Handshake for peer-to-peer item transfers.
+### 3.2. `docs/ARCHITECTURE.md`
 
-5. **Phase 14: Deep-Vector Mitigation (Weeks 21-22)**
-   - Integrate Active Liveness SDKs (Hyperverge) and Android Overlay blocking (`FLAG_SECURE`).
-   - Architect the IPFS Pre/Post Condition Video Hashing pipeline for automated dispute resolution.
-   - Implement AML Neo4j Graph Algorithms for velocity threshold monitoring.
+Still references V1/V2 concepts like "Prisma ORM," "Express," and "PostgreSQL." Needs a **complete rewrite** to reflect the V3 Firebase/tRPC/XState stack.
 
-***
+### 3.3. `docs/API_SPEC.md`
 
-*End of V3 Critique. We have transitioned from building an app to engineering a hyper-resilient, distributed marketplace mesh. We accept nothing less than mathematical certainty and cryptographic immutability in our architecture.*
+References REST endpoints (`POST /auth/signup`, `GET /items/:id`). The backend now uses tRPC callables, not REST. **Needs complete rewrite** to document tRPC router procedures.
+
+---
+
+## 4. Architecture: The Gaps Behind the Bleeding Edge
+
+### 4.1. Zero Test Coverage (The Existential Risk)
+
+This is the single most dangerous gap in the entire project. There are **no unit tests, no integration tests, and no end-to-end tests** anywhere in the monorepo.
+
+- `firebase/functions/src/__tests__/` contains only 1 file (likely placeholder).
+- `frontend/` has no test files.
+- The `tests/` root directory is **empty**.
+- The `detox` dependency is installed but no Detox test files exist.
+
+**The Fix:**
+
+1. Create `BookingService.test.ts` with XState state machine transition tests.
+2. Create `tRPC Router` integration tests using `vitest`.
+3. Configure Detox for E2E UI testing on the frontend.
+4. Add a `test` CI gate to block PRs with < 60% coverage.
+
+### 4.2. `mockData.ts` Is Still in Production
+
+`frontend/src/services/mockData.ts` contains 5 hardcoded items with Unsplash URLs. This file is **imported by production components** and should have been replaced by Typesense search results.
+
+**The Fix:** Audit all imports of `mockData.ts`. Replace them with `useTypesenseSearch` hooks. Delete the file.
+
+### 4.3. XState Actor Lifecycle Inefficiency
+
+In `BookingService.ts`, a **new XState actor is instantiated on every single booking call**:
+
+```typescript
+const actor = createActor(EscrowMachine).start();
+```
+
+This is wasteful. The actor is created, sent one event, its state is read, and it's immediately garbage collected — it's being used as a pure function, not as a persisted state machine.
+
+**The Fix:** Either:
+
+- Use `EscrowMachine.resolveState()` for pure state resolution (no actor overhead), or
+- Persist the actor reference in Firestore and rehydrate it for subsequent state transitions (proper XState persistence pattern).
+
+### 4.4. `docker-compose.yml` Uses Deprecated Syntax
+
+Line 1: `version: '3.8'` — Docker Compose V2 ignores this field and it generates deprecation warnings.
+
+**The Fix:** Remove the `version` key entirely. Docker Compose V2 auto-detects the schema.
+
+### 4.5. Dual Booking Pathways (tRPC vs. Callable)
+
+Both `initiateItemBooking` (Firebase `onCall` Callable) and `tRPC` (via `trpcFunction`) are exported in `index.ts`. This means the booking flow can be invoked via **two completely independent code paths** — one type-safe (tRPC), one manually validated (Zod on the Callable).
+
+**The Fix:** Deprecate and remove the raw `onCall` Callable. Route all mutations exclusively through the tRPC router for a single source of truth.
+
+---
+
+## 5. Security: The Indian Fintech Imperative (Still Unimplemented)
+
+The following items from the original V3 Critique remain **completely unimplemented**:
+
+| Security Feature | Status | Priority |
+|-----------------|--------|----------|
+| S2S Webhook Validation (HMAC-SHA256) for UPI Payments | ❌ Not Implemented | P0 |
+| Hardware KeyStore Device Binding (Android/iOS Secure Enclave) | ❌ Not Implemented | P0 |
+| RASP / Root Detection (FreeRASP/Appdome) | ❌ Not Implemented | P1 |
+| FLAG_SECURE on Financial Screens | ❌ Not Implemented | P1 |
+| Cryptographic QR TOTP Handshake for Physical Handover | ❌ Partially (UI exists in `handshake.tsx` but no crypto backend) | P1 |
+| Active Liveness KYC (Hyperverge/IDfy) | ❌ Partially (UI exists in `verification.tsx` but no SDK integration) | P2 |
+| AML Graph Database (Neo4j/Neptune) | ❌ Not Implemented (`AMLGraphService.ts` exists but is a stub) | P2 |
+| IPFS Pre/Post Condition Video Hashing | ❌ Not Implemented (`IPFSService.ts` exists but is a stub) | P3 |
+
+**Assessment:** The frontend UI shells for `handshake.tsx` and `verification.tsx` exist, but the backend cryptographic infrastructure behind them is completely absent. These screens are presentation-only with no functional cryptographic backend.
+
+---
+
+## 6. DevOps & Build System: The Remaining Friction
+
+### 6.1. No Docker Health Checks
+
+The `docker-compose.yml` has no `healthcheck` directives on any service. If Typesense or Redis crashes silently, dependent services will hang indefinitely.
+
+**The Fix:** Add health checks:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+```
+
+### 6.2. `pnpm-workspace.yaml` Only Includes `frontend`
+
+The backend (`firebase/functions`) is **not registered** as a pnpm workspace. This means `turbo run typecheck` won't reach the backend, and `typedoc`'s `packages` strategy may miss it for dependency resolution.
+
+**The Fix:** Add `firebase/functions` to `pnpm-workspace.yaml`:
+
+```yaml
+packages:
+  - frontend
+  - firebase/functions
+```
+
+### 6.3. `frontend/tsconfig.json` Has Empty `compilerOptions`
+
+The frontend's `tsconfig.json` delegates everything to `expo/tsconfig.base` but sets zero strict flags. There is no `strict: true`, no `noImplicitAny`, and no `noUnusedLocals`.
+
+**The Fix:** Enable strict TypeScript compilation:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "extends": "expo/tsconfig.base"
+}
+```
+
+---
+
+## 7. The V4 Action Plan (The Next Frontier)
+
+| Phase | Objective | Timeline |
+|-------|-----------|----------|
+| **Phase 17** | **Emergency Security Remediation** — Delete leaked secrets, rotate credentials, purge Git history, add `.gitignore` rules. | Immediate |
+| **Phase 18** | **Repository Hygiene** — Delete all orphan directories/files, remove stale CI pipelines, purge `mockData.ts`, delete legacy DSPy docs. | 1 day |
+| **Phase 19** | **Test Infrastructure** — Set up Vitest for backend, Jest for frontend, Detox for E2E. Write critical path tests for `BookingService`, `TypesenseSync`, and `AuthContext`. Target 60% coverage. | 2 weeks |
+| **Phase 20** | **Fintech Fortification** — Implement S2S webhook validation, hardware device binding, FLAG_SECURE, and RASP integration. | 3 weeks |
+| **Phase 21** | **tRPC Unification** — Deprecate raw Callables. Route 100% of mutations through tRPC. Add strict TypeScript compilation flags. | 1 week |
+
+---
+
+*End of the Reckoning. The vision is extraordinary. The architecture is bleeding-edge. But the devil is in the details — and those details currently include leaked secrets, zero test coverage, and stub security services. Fix these, and Sahaay doesn't just compete — it dominates.*
