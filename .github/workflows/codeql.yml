@@ -3,8 +3,18 @@ name: CodeQL
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'frontend/src/**'
+      - 'firebase/functions/src/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'frontend/src/**'
+      - 'firebase/functions/src/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -18,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript-typescript', 'python' ]
+        language: [ 'javascript-typescript' ]
 
     runs-on: ubuntu-latest
 
