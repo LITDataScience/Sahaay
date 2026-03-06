@@ -33,17 +33,14 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onItemCreated = exports.onItemWrite = exports.initiateItemBooking = exports.onUserCreate = exports.tRPC = exports.genius = void 0;
+exports.onItemCreated = exports.onItemWrite = exports.onUserCreate = exports.tRPC = exports.genius = void 0;
 const admin = __importStar(require("firebase-admin"));
-const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const identity_1 = require("firebase-functions/v2/identity");
 admin.initializeApp(); // Ensure admin is initialized
 // Import Agents
 const genius_1 = require("./agents/genius");
-// Import Services & Schemas
-const BookingService_1 = require("./services/BookingService");
-const booking_1 = require("./schemas/booking");
+// Import Services
 const AIService_1 = require("./services/AIService");
 const TypesenseSync_1 = require("./services/TypesenseSync");
 const index_1 = require("./router/index");
@@ -61,32 +58,6 @@ exports.onUserCreate = (0, identity_1.beforeUserCreated)(async (event) => {
         role: "user", // Default role
         reputationScore: 0
     }, { merge: true });
-});
-// Callable Functions
-exports.initiateItemBooking = (0, https_1.onCall)(async (request) => {
-    // 0. AppCheck Enforcement
-    if (request.app == undefined) {
-        throw new https_1.HttpsError('failed-precondition', 'The function must be called from an App Check verified app.');
-    }
-    // 1. Authenticate Request
-    if (!request.auth) {
-        throw new https_1.HttpsError('unauthenticated', 'User must be logged in to book an item.');
-    }
-    // 2. Validate Payload with Zod
-    const validationResult = booking_1.BookingRequestSchema.safeParse(request.data);
-    if (!validationResult.success) {
-        throw new https_1.HttpsError('invalid-argument', 'Invalid booking payload', validationResult.error.format());
-    }
-    // 3. Execute Service
-    try {
-        const bookingService = new BookingService_1.BookingService();
-        const result = await bookingService.createItemBooking(validationResult.data, request.auth.uid);
-        return { success: true, data: result };
-    }
-    catch (e) {
-        console.error("Booking Error:", e);
-        throw new https_1.HttpsError('internal', e.message || 'Booking failed');
-    }
 });
 // Typesense Search Replication
 exports.onItemWrite = (0, firestore_1.onDocumentWritten)('items/{itemId}', async (event) => {

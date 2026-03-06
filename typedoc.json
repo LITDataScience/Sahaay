@@ -5,7 +5,7 @@
         "firebase/functions"
     ],
     "entryPointStrategy": "packages",
-    "out": "docs-output",
+    "out": "docs/api",
     "name": "Sahaay V3 — API Reference",
     "readme": "docs/README.md",
     "plugin": [
