@@ -6,17 +6,26 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_WORKINGDIR": "frontend"
+      }
     },
     "preview": {
       "android": {
         "image": "latest",
         "buildType": "apk"
       },
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_WORKINGDIR": "frontend"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_WORKINGDIR": "frontend"
+      }
     }
   },
   "submit": {
