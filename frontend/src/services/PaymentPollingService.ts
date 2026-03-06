@@ -4,6 +4,7 @@
 // SPDX-Header-End
 
 import { SecurityService } from './SecurityService';
+import functions from '@react-native-firebase/functions';
 
 export type PaymentStatus = 'processing' | 'success' | 'failed' | 'timeout';
 
@@ -36,7 +37,7 @@ export const PaymentPollingService = {
 
                 // Simulated API Call to Sahaay Backend
                 console.log(`[Poll Attempt ${attempt}/${maxAttempts}] Querying Backend with Device Signature...`);
-                const status = await this.mockBackendStatusCheck(bookingId, signature, attempt);
+                const status = await this.mockBackendStatusCheck(bookingId, signature);
 
                 if (status === 'success' || status === 'failed') {
                     console.log(`[Zero-Trust] Definitive Payment State Received: ${status.toUpperCase()}`);
@@ -59,21 +60,21 @@ export const PaymentPollingService = {
     },
 
     /**
-     * Simulated HTTP Callable that represents our Node.js Backend reading the database
+     * Real HTTP Callable that represents our Node.js Backend reading the database
      * state which is mutated exclusively by Razorpay/Cashfree Webhooks.
      */
-    async mockBackendStatusCheck(bookingId: string, _signature: string, attempt: number): Promise<PaymentStatus> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Simulate a webhook taking a few seconds to process and hit our backend
-                if (attempt < 4) {
-                    resolve('processing');
-                } else {
-                    // Determine success/fail randomly for demo, but leaning heavily toward success
-                    resolve(Math.random() > 0.1 ? 'success' : 'failed');
-                }
-            }, 500);
-        });
+    async mockBackendStatusCheck(_bookingId: string, _signature: string): Promise<PaymentStatus> {
+        try {
+            const response = await functions().httpsCallable('tRPC')({
+                path: 'paymentStatus',
+                input: { bookingId: _bookingId, signature: _signature }
+            });
+            const data = response.data as any;
+            return data.status || 'processing';
+        } catch (e) {
+            console.error('tRPC paymentStatus error:', e);
+            return 'processing';
+        }
     },
 
     wait(ms: number) {

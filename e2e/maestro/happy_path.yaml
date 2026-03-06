@@ -1,0 +1,20 @@
+appId: com.sahaay.app
+---
+- launchApp
+- assertVisible: "Login"
+- tapOn: "Email Address"
+- inputText: "test@sahaay.com"
+- tapOn: "Password"
+- inputText: "SecurePass123!"
+- tapOn: "Sign In"
+- assertVisible: "Explore Hyperlocal Items"
+- tapOn: "Search"
+- inputText: "Power Drill"
+- tapOn: "Power Drill - Bosch"
+- assertVisible: "Book Item"
+- tapOn: "Confirm Booking & Pay"
+# Escrow and Payment Flow
+- assertVisible: "Payment Verified"
+- tapOn: "View Digital Handshake"
+- assertVisible: "Physical Escrow Handover"
+- assertVisible: "Mandatory Condition Check"

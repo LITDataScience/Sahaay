@@ -5,12 +5,7 @@
 
 import * as Crypto from 'expo-crypto';
 
-type EscrowGraphNode = {
-    userId: string;
-    timestamp: number;
-    amount: number;
-    itemId: string;
-}
+// removed unused EscrowGraphNode type
 
 export const AMLGraphService = {
     /**

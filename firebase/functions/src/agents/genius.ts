@@ -1,4 +1,4 @@
-import * as functions from "firebase-functions";
+import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
@@ -17,7 +17,10 @@ interface GeniusRequest {
     location: { lat: number; lng: number };
 }
 
-export const sahaayGenius = functions.https.onRequest((req, res) => {
+export const sahaayGenius = onRequest({
+    enforceAppCheck: true,
+    maxInstances: 10
+}, (req, res) => {
     corsHandler(req, res, async () => {
         try {
             const { text, imageBase64, location } = req.body as GeniusRequest;

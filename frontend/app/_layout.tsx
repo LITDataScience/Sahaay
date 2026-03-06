@@ -1,7 +1,7 @@
-import { Stack, Slot, ErrorBoundary } from 'expo-router';
+import { Stack } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/shared/api/queryClient';
-import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { AuthProvider } from '../src/context/AuthContext';
 import Colors from '../src/constants/Colors';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';

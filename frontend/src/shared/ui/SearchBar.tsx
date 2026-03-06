@@ -35,7 +35,7 @@ const SearchBar: React.FC<Props> = ({ placeholder = 'Search items, categories, u
 const styles = StyleSheet.create({
 	container: {
 		backgroundColor: Colors.surface,
-		borderRadius: Theme.borderRadius.round, // Pill shape
+		borderRadius: Theme.borderRadius.full, // Pill shape
 		paddingHorizontal: Theme.spacing.md,
 		paddingVertical: 12, // Slightly taller
 		flexDirection: 'row',

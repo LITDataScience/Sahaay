@@ -3,21 +3,22 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Search, MapPin, SlidersHorizontal } from 'lucide-react-native';
 import SearchBar from '../../src/shared/ui/SearchBar';
 import CategoryChips from '../../src/features/listings/ui/CategoryChips';
-import ItemCard, { Item } from '../../src/features/listings/ui/ItemCard';
-const categoriesData = ['All', 'Electronics', 'Tools', 'Appliances', 'Fashion', 'Sports'];
+import ItemCard from '../../src/features/listings/ui/ItemCard';
 import Colors from '../../src/constants/Colors';
 import Theme from '../../src/constants/Theme';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../src/context/AuthContext';
-import { Routes } from '../../src/types/navigation';
 import { supabase } from '../../src/lib/supabase';
+
+const AnyFlashList = FlashList as any;
+
+const categoriesData = ['All', 'Electronics', 'Tools', 'Appliances', 'Fashion', 'Sports'];
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -25,7 +26,7 @@ const HomeScreen = () => {
   const [category, setCategory] = useState('All');
 
   // Phase 12: Supabase Realtime Feed
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,21 +38,24 @@ const HomeScreen = () => {
       if (category !== 'All') q = q.eq('category', category);
       if (query.length > 2) q = q.ilike('title', `%${query}%`);
 
-      const { data, error } = await q;
+      const { data, error: qError } = await q;
 
-      if (active && data) {
-        setItems(data as unknown as Item[]);
+      if (active) {
+        if (qError) {
+          console.error(qError);
+        } else {
+          setItems(data as any[] || []);
+        }
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchItems();
 
-    // Bind Realtime Subscription to instantly remove booked items
-    const channel = supabase.channel('public:items')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
-        fetchItems();
-      })
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel('public:items')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, fetchItems)
       .subscribe();
 
     return () => {
@@ -61,57 +65,69 @@ const HomeScreen = () => {
   }, [category, query]);
 
   const { width } = useWindowDimensions();
-  const numColumns = width >= 1100 ? 3 : width >= 768 ? 2 : 1;
-
-  const renderItem = ({ item }: { item: Item }) => (
-    <ItemCard item={item} onPress={() => router.push({ pathname: Routes.Dynamic.ItemDetails(item.id) as any, params: { itemData: JSON.stringify(item) } })} />
-  );
+  const numColumns = width > 600 ? 3 : 2;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.primary} />
-
-      <View style={styles.header}>
-        <LinearGradient
-          colors={[Colors.primary, Colors.darkPrimary]}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.headerTitle}>Sahaay</Text>
-              <Text style={styles.headerSubtitle}>Borrow from your neighborhood</Text>
-            </View>
+      <LinearGradient
+        colors={[Colors.primary, Colors.darkPrimary]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Sahaay</Text>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Search color="#fff" size={24} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <MapPin color="#fff" size={24} />
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.searchWrapper}>
-            <SearchBar value={query} onChangeText={setQuery} />
-          </View>
-        </LinearGradient>
-      </View>
-
-      <View style={styles.contentContainer}>
-        <View style={styles.categoriesWrapper}>
-          <CategoryChips categories={categoriesData} selected={category} onSelect={setCategory} />
         </View>
 
-        <FlashList
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search for items to borrow..."
+          />
+        </View>
+      </LinearGradient>
+
+      <View style={styles.content}>
+        <View style={styles.filterSection}>
+          <CategoryChips
+            categories={categoriesData}
+            selected={category}
+            onSelect={setCategory}
+          />
+          <TouchableOpacity style={styles.filterBtn}>
+            <SlidersHorizontal color={Colors.text.primary} size={20} />
+          </TouchableOpacity>
+        </View>
+
+        <AnyFlashList
           data={items}
-          renderItem={renderItem as any}
+          renderItem={({ item }: any) => (
+            <ItemCard
+              item={item}
+              onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } } as any)}
+            />
+          )}
           keyExtractor={(item: any) => item.id}
-          contentContainerStyle={[styles.listContainer, numColumns > 1 && styles.listGrid]}
-          showsVerticalScrollIndicator={false}
           numColumns={numColumns}
-          // @ts-ignore - The package types do not correctly export the intrinsic FlatList props.
-          estimatedItemSize={250}
+          estimatedItemSize={280}
+          contentContainerStyle={styles.listContent}
+          onRefresh={() => { }}
+          refreshing={isLoading}
         />
       </View>
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/create' as any)}
-        activeOpacity={0.8}
+        onPress={() => router.push('/listing/create' as any)}
       >
-        <Plus size={32} color={Colors.text.primary} />
+        <Plus color="#fff" size={28} />
       </TouchableOpacity>
     </View>
   );
@@ -120,67 +136,72 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#F8F9FA',
   },
   header: {
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: Colors.primary,
-    ...Theme.shadows.medium,
-  },
-  headerGradient: {
-    paddingTop: 50,
-    paddingBottom: 24,
+    paddingTop: 60,
+    paddingBottom: 25,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   headerContent: {
-    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
-  headerTitle: {
+  title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.text.primary,
-    marginBottom: 4,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
-  headerSubtitle: {
-    fontSize: 16,
-    color: Colors.text.primary,
-    opacity: 0.8,
+  headerIcons: {
+    flexDirection: 'row',
   },
-  searchWrapper: {
-    marginTop: 8,
+  iconButton: {
+    marginLeft: 15,
+    padding: 5,
   },
-  contentContainer: {
+  searchContainer: {
+    marginTop: 5,
+  },
+  content: {
     flex: 1,
+    marginTop: -20,
   },
-  categoriesWrapper: {
-    paddingVertical: 12,
+  filterSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 10,
   },
-  listContainer: {
-    padding: 16,
-    paddingTop: 0,
+  filterBtn: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginLeft: 10,
+    ...Theme.shadows.small,
   },
-  listGrid: {
-    gap: 16,
+  listContent: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 100,
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: Colors.primary, // Yellow FAB
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    bottom: 30,
+    right: 25,
+    width: 60,
+    height: 60,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Theme.shadows.large,
-    borderWidth: 2,
-    borderColor: Colors.surface,
+    ...Theme.shadows.medium,
+    elevation: 5,
   },
 });
 
 export default HomeScreen;
-
-
