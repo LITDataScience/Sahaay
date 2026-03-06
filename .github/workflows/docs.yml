@@ -3,6 +3,12 @@ name: Auto-Generate Documentation
 on:
   push:
     branches: [main]
+    paths:
+      - 'frontend/src/**/*.ts'
+      - 'frontend/src/**/*.tsx'
+      - 'firebase/functions/src/**/*.ts'
+      - 'typedoc.json'
+      - 'package.json'
   workflow_dispatch:
 
 permissions:
