@@ -1,6 +1,12 @@
 {
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "jsx": "react-native",
+    "moduleResolution": "bundler"
   },
   "extends": "expo/tsconfig.base",
   "include": [

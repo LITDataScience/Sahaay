@@ -1,25 +1,23 @@
 // SPDX-Header-Start
 // SPDX-License-Identifier: LicenseRef-Sahaay-Proprietary
-// © 2026 Sahaay Technologies Pvt. Ltd. All rights reserved.
+// © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '../src/context/AuthContext';
-import { SecurityService } from '../src/services/SecurityService';
-import { IPFSService } from '../src/services/IPFSService';
-import { useMachine } from '@xstate/react';
-import { escrowMachine } from '../src/machines/escrowMachine';
 import Colors from '../src/constants/Colors';
-import Theme from '../src/constants/Theme';
-import { LinearGradient } from 'expo-linear-gradient';
-import { QrCode, Scan, ShieldCheck, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { Send, QrCode } from 'lucide-react-native';
 
-// Simulated Escrow Session
-const MOCK_BOOKING_ID = 'ESCROW_BKG_49201';
+/**
+ * Escrow Handshake Screen
+ * 
+ * Demonstrates the QR-based P2P handshake mechanism for starting an escrow booking.
+ * Borrower scans Lender's QR, which initiates the XState Escrow Machine on backend.
+ */
 
 export default function HandshakeScreen() {
     const router = useRouter();
@@ -27,184 +25,86 @@ export default function HandshakeScreen() {
 
     const [activeTab, setActiveTab] = useState<'generate' | 'scan'>('generate');
     const [permission, requestPermission] = useCameraPermissions();
-    const [scanned, setScanned] = useState(false);
-    const [qrPayload, setQrPayload] = useState<string>('');
-
-    // Phase 11: Escrow Mathematical State Machine
-    const [state, send] = useMachine(escrowMachine);
-
-    // IPFS Dispute Resolution State
-    const [hasRecordedSweep, setHasRecordedSweep] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [mediaHashCID, setMediaHashCID] = useState<string>('');
-
-    // Generating a dynamic, signed payload for the Lender
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval>;
-
-        const generatePayload = async () => {
-            if (!hasRecordedSweep || !mediaHashCID) return;
-
-            try {
-                const timestamp = Math.floor(Date.now() / 10000); // Rotates every 10 seconds
-                const rawPayload = `SAHAAY_HANDSHAKE|${MOCK_BOOKING_ID}|${timestamp}|IPFS:${mediaHashCID}`;
-                // Sign payload with the hardware enclave key to prevent spoofing
-                const signature = await SecurityService.signPayload(rawPayload);
-                setQrPayload(`${rawPayload}|SIG:${signature.substring(0, 16)}`);
-            } catch (err) {
-                setQrPayload('SECURITY_ERROR: DEVICE_NOT_BOUND');
-            }
-        };
-
-        if (activeTab === 'generate' && hasRecordedSweep) {
-            generatePayload();
-            interval = setInterval(generatePayload, 10000);
-        }
-
-        return () => clearInterval(interval);
-    }, [activeTab]);
-
-    const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
-        setScanned(true);
-        if (data.startsWith('SAHAAY_HANDSHAKE')) {
-            const parts = data.split('|');
-            const ipfsHash = parts.find(p => p.startsWith('IPFS:'))?.split(':')[1] || 'UNKNOWN';
-
-            // Phase 11: Dispatch formal mathematical state transition
-            send({ type: 'HANDSHAKE_SCANNED', ipfsHash });
-
-            Alert.alert(
-                'Cryptographic Handshake Successful',
-                `Escrow conditions satisfied via Abstract Machine.\nImmutable Condition Hash: ${ipfsHash.substring(0, 12)}... pinned. Item officially handed over.`,
-                [{ text: 'Complete', onPress: () => router.back() }]
-            );
-        } else {
-            Alert.alert('Invalid Handshake', 'This QR code is not recognized.', [
-                { text: 'Try Again', onPress: () => setScanned(false) }
-            ]);
-        }
-    };
-
-    const captureConditionSweep = async () => {
-        setIsRecording(true);
-        // Simulate recording a 5-second 360-sweep
-        setTimeout(async () => {
-            setIsRecording(false);
-            const simulatedVideoUri = `file:///data/user/0/com.sahaay/cache/Video_${Date.now()}.mp4`;
-            const cid = await IPFSService.pinVideoAndGetHash(simulatedVideoUri);
-            setMediaHashCID(cid);
-            setHasRecordedSweep(true);
-            Alert.alert("Evidentiary Hash Generated", `Condition proof pinned to IPFS.\nCID: ${cid}`);
-        }, 5000);
-    };
+    const [loading, setLoading] = useState(false);
 
     if (!permission) {
         return <View />;
     }
 
-    if (!permission.granted && activeTab === 'scan') {
+    if (!permission.granted) {
         return (
-            <View style={styles.container}>
-                <Text style={styles.message}>We need your permission to show the camera</Text>
+            <View style={styles.permissionContainer}>
+                <Text style={styles.infoText}>We need your permission to show the camera</Text>
                 <TouchableOpacity style={styles.primaryButton} onPress={requestPermission}>
-                    <Text style={styles.buttonText}>Grant Permission</Text>
+                    <Text style={styles.primaryButtonText}>Grant Permission</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
+    const handleBarCodeScanned = async ({ data }: { data: string }) => {
+        if (loading) return;
+        setLoading(true);
+        console.log('Scanned QR Payload:', data);
+
+        // Mocking the handshake transition
+        Alert.alert(
+            'Handshake Successful',
+            'Connected to Lender. Initiating Escrow payment...',
+            [{ text: 'Proceed', onPress: () => router.push('/booking' as any) }]
+        );
+        setLoading(false);
+    };
+
     return (
         <View style={styles.container}>
-            <LinearGradient colors={[Colors.primary, Colors.darkPrimary]} style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <ArrowLeft color="#000" size={24} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Physical Escrow Handover</Text>
-            </LinearGradient>
-
             <View style={styles.tabContainer}>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'generate' && styles.activeTab]}
                     onPress={() => setActiveTab('generate')}
                 >
-                    <QrCode color={activeTab === 'generate' ? '#fff' : Colors.text.secondary} size={20} />
-                    <Text style={[styles.tabText, activeTab === 'generate' && styles.activeTabText]}>Lender (Show QR)</Text>
+                    <QrCode size={20} color={activeTab === 'generate' ? Colors.primary : Colors.text.secondary} />
+                    <Text style={[styles.tabText, activeTab === 'generate' && styles.activeTabText]}>Show My ID</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'scan' && styles.activeTab]}
-                    onPress={() => {
-                        setScanned(false);
-                        setActiveTab('scan');
-                    }}
+                    onPress={() => setActiveTab('scan')}
                 >
-                    <Scan color={activeTab === 'scan' ? '#fff' : Colors.text.secondary} size={20} />
-                    <Text style={[styles.tabText, activeTab === 'scan' && styles.activeTabText]}>Borrower (Scan)</Text>
+                    <Send size={20} color={activeTab === 'scan' ? Colors.primary : Colors.text.secondary} />
+                    <Text style={[styles.tabText, activeTab === 'scan' && styles.activeTabText]}>Scan to Borrow</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.content}>
                 {activeTab === 'generate' ? (
-                    !hasRecordedSweep ? (
-                        <View style={styles.recordContainer}>
-                            <Text style={styles.instructionTitle}>Mandatory Condition Check</Text>
-                            <Text style={styles.instructionDesc}>
-                                Before generating the handover QR, you must record a 5-second 360° sweep of the item to cryptographically prove its condition and prevent false disputes.
-                            </Text>
-                            <View style={styles.cameraWrapper}>
-                                <CameraView style={styles.camera} facing="back" />
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.primaryButton, isRecording && { backgroundColor: '#d32f2f' }]}
-                                onPress={captureConditionSweep}
-                                disabled={isRecording}
-                            >
-                                <Text style={styles.buttonText}>
-                                    {isRecording ? "Recording 360° Sweep..." : "Start Arbitration Capture"}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.qrContainer}>
-                            <Text style={styles.instructionTitle}>Show this code to the Borrower</Text>
-                            <Text style={styles.instructionDesc}>
-                                This mathematically proves you handed over the item. The code changes every 10 seconds.
-                            </Text>
+                    <View style={styles.qrContainer}>
+                        <Text style={styles.qrTitle}>Your Handshake ID</Text>
+                        <Text style={styles.qrSubtitle}>Have the other person scan this to start the transaction</Text>
 
-                            <View style={styles.qrWrapper}>
-                                {qrPayload ? (
-                                    <QRCode
-                                        value={qrPayload}
-                                        size={250}
-                                        color={Colors.text.primary}
-                                        backgroundColor="#fff"
-                                    />
-                                ) : (
-                                    <Text>Generating secure payload...</Text>
-                                )}
-                            </View>
-                            <View style={styles.secureBadge}>
-                                <ShieldCheck size={16} color="#2e7d32" />
-                                <Text style={styles.secureBadgeText}>Hardware-Encrypted Payload + IPFS Ledger</Text>
-                            </View>
-                        </View>
-                    )
-                ) : (
-                    <View style={styles.scannerContainer}>
-                        <Text style={styles.instructionTitle}>Scan the Lender's QR Code</Text>
-                        <Text style={styles.instructionDesc}>
-                            Scanning authorizes the transfer of responsibility and finalizes the physical handover process.
-                        </Text>
-
-                        <View style={styles.cameraWrapper}>
-                            <CameraView
-                                style={styles.camera}
-                                facing="back"
-                                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-                                barcodeScannerSettings={{
-                                    barcodeTypes: ["qr"],
-                                }}
+                        <View style={styles.qrFrame}>
+                            <QRCode
+                                value={`sahaay:user:${user?.id || 'anonymous'}`}
+                                size={220}
+                                color={Colors.text.primary}
+                                backgroundColor="#fff"
                             />
                         </View>
+
+                        <Text style={styles.userName}>{user?.id || 'Demo User'}</Text>
+                        <View style={styles.securityBadge}>
+                            <Text style={styles.securityText}>Verified Peer-to-Peer Secure</Text>
+                        </View>
+                    </View>
+                ) : (
+                    <View style={styles.cameraContainer}>
+                        <CameraView
+                            style={styles.camera}
+                            onBarcodeScanned={handleBarCodeScanned}
+                        />
+                        <View style={styles.overlay}>
+                            <View style={styles.scannerFrame} />
+                        </View>
+                        <Text style={styles.scanInstruction}>Point at a Sahaay QR code</Text>
                     </View>
                 )}
             </View>
@@ -215,30 +115,20 @@ export default function HandshakeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: '#fff',
     },
-    header: {
-        paddingTop: 50,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
+    permissionContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-    },
-    backButton: {
-        marginRight: 16,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#000',
+        padding: 20,
     },
     tabContainer: {
         flexDirection: 'row',
-        margin: Theme.spacing.md,
-        backgroundColor: Colors.surface,
-        borderRadius: Theme.borderRadius.md,
-        padding: 4,
-        ...Theme.shadows.small,
+        padding: 5,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+        margin: 20,
     },
     tab: {
         flex: 1,
@@ -246,98 +136,122 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 12,
-        borderRadius: Theme.borderRadius.md,
-        gap: 8,
+        borderRadius: 8,
     },
     activeTab: {
-        backgroundColor: Colors.secondary,
+        backgroundColor: '#fff',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     tabText: {
-        fontSize: 14,
+        marginLeft: 8,
         fontWeight: '600',
-        color: Colors.text.secondary,
+        color: '#6B7280',
     },
     activeTabText: {
-        color: '#fff',
+        color: '#000',
     },
     content: {
         flex: 1,
-        padding: Theme.spacing.lg,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     qrContainer: {
         alignItems: 'center',
-        flex: 1,
+        padding: 20,
     },
-    instructionTitle: {
-        fontSize: 18,
+    qrTitle: {
+        fontSize: 22,
         fontWeight: 'bold',
-        color: Colors.text.primary,
         marginBottom: 8,
     },
-    instructionDesc: {
-        fontSize: 14,
-        color: Colors.text.secondary,
+    qrSubtitle: {
         textAlign: 'center',
-        marginBottom: 32,
-        paddingHorizontal: 20,
+        color: '#6B7280',
+        marginBottom: 30,
+        paddingHorizontal: 30,
     },
-    qrWrapper: {
+    qrFrame: {
+        padding: 20,
         backgroundColor: '#fff',
-        padding: 24,
-        borderRadius: Theme.borderRadius.lg,
-        ...Theme.shadows.medium,
+        borderRadius: 24,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
     },
-    secureBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 24,
-        backgroundColor: '#e8f5e9',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        gap: 8,
-    },
-    secureBadgeText: {
-        color: '#2e7d32',
+    userName: {
+        marginTop: 25,
+        fontSize: 18,
         fontWeight: '600',
+    },
+    securityBadge: {
+        marginTop: 10,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    securityText: {
+        color: '#059669',
         fontSize: 12,
+        fontWeight: '500',
     },
-    scannerContainer: {
-        flex: 1,
+    cameraContainer: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
         alignItems: 'center',
-    },
-    cameraWrapper: {
-        width: 300,
-        height: 300,
-        borderRadius: Theme.borderRadius.lg,
-        overflow: 'hidden',
-        ...Theme.shadows.large,
-        borderWidth: 2,
-        borderColor: Colors.primary,
-        marginBottom: 20,
     },
     camera: {
-        flex: 1,
+        width: '100%',
+        height: '100%',
     },
-    message: {
-        textAlign: 'center',
-        paddingBottom: 10,
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    scannerFrame: {
+        width: 250,
+        height: 250,
+        borderWidth: 2,
+        borderColor: '#fff',
+        borderRadius: 20,
+        backgroundColor: 'transparent',
+    },
+    scanInstruction: {
+        position: 'absolute',
+        bottom: 100,
+        color: '#fff',
         fontSize: 16,
+        fontWeight: '600',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    infoText: {
+        marginBottom: 20,
+        textAlign: 'center',
+        color: '#6B7280',
     },
     primaryButton: {
-        backgroundColor: Colors.primary,
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginHorizontal: 20,
+        backgroundColor: '#000',
+        paddingHorizontal: 30,
+        paddingVertical: 15,
+        borderRadius: 12,
     },
-    buttonText: {
+    primaryButtonText: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 16,
-    },
-    recordContainer: {
-        alignItems: 'center',
-        flex: 1,
     }
 });

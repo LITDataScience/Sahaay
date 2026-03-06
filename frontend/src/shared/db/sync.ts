@@ -1,11 +1,21 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
 import { database } from './index';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 // A mock network endpoint representing the Sahaay distributed sync backend
 const SYNC_ENDPOINT = 'https://api.sahaay.local/v3/sync';
 
 export async function syncDatabase(userId: string) {
     try {
+        const netInfo = await NetInfo.fetch();
+        if (!netInfo.isConnected) {
+            console.log('Device is offline. Queuing sync for later.');
+            // Add to a simple local sync queue using AsyncStorage
+            await AsyncStorage.setItem('@sahaay_pending_sync', 'true');
+            return;
+        }
+
         await synchronize({
             database,
             pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
@@ -41,10 +51,7 @@ export async function syncDatabase(userId: string) {
             // 
             // Our deterministic resolution engine guarantees Last-Write-Wins (LWW) by utilizing
             // synchronized vector clocks or simple precise Server Timestamps embedded on the nodes.
-            conflictResolver: (tableName, local, server) => {
-                // True CRDTs implement complex structural merges, but for simple document entities
-                // like Chat Threads and Listings, timestamp-based LWW is mathematically sound.
-
+            conflictResolver: (_tableName, local, server) => {
                 const localUpdatedAt = local._raw.updated_at || 0;
                 const serverUpdatedAt = server.updated_at || 0;
 
@@ -58,8 +65,25 @@ export async function syncDatabase(userId: string) {
             },
             migrationsEnabledAtVersion: 1,
         });
+
+        await AsyncStorage.removeItem('@sahaay_pending_sync');
         console.log('WatermelonDB synced successfully with distributed cluster.');
     } catch (error) {
         console.error('Offline synchronization failed, queuing for background retry', error);
+        await AsyncStorage.setItem('@sahaay_pending_sync', 'true');
     }
+}
+
+// Subscribe to network state changes to automatically trigger sync when back online
+export function setupBackgroundSync(userId: string) {
+    NetInfo.addEventListener((state) => {
+        if (state.isConnected && state.isInternetReachable) {
+            AsyncStorage.getItem('@sahaay_pending_sync').then(pending => {
+                if (pending === 'true') {
+                    console.log('Network restored. Processing queued offline syncs...');
+                    syncDatabase(userId);
+                }
+            });
+        }
+    });
 }

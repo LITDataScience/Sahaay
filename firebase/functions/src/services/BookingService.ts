@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { createMachine, createActor } from 'xstate';
 import { BookingRequest } from '../schemas/booking';
+import { AMLGraphService } from './AMLGraphService';
 
 // Define the deterministic Escrow State Machine
 export const EscrowMachine = createMachine({
@@ -101,6 +102,12 @@ export class BookingService {
             const depositAmount = itemData?.deposit || 0;
             const platformFee = baseAmount * 0.10;
             const totalAmount = baseAmount + depositAmount + platformFee;
+
+            // 4.5. AML Structural Velocity Interdiction
+            const isFlagged = await AMLGraphService.evaluateVelocityGraph(itemData?.ownerId, borrowerId, totalAmount);
+            if (isFlagged) {
+                throw new Error("Transaction blocked due to AML compliance policies (Velocity Violation).");
+            }
 
             // 5. Native State Machine enforcement
             // In XState V5, machines don't have .initialState directly; we resolve the initial state using createActor

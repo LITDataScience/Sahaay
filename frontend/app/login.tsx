@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -36,7 +35,6 @@ const LoginScreen = () => {
 
   // Google Auth Request
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    // Client IDs should be added here
     androidClientId: '400664256540-20fahhlp2p0vecc1sjheohclrv4msbnu.apps.googleusercontent.com',
     iosClientId: 'YOUR_IOS_CLIENT_ID',
     webClientId: 'YOUR_WEB_CLIENT_ID',
@@ -49,16 +47,13 @@ const LoginScreen = () => {
 
   useEffect(() => {
     if (googleResponse?.type === 'success') {
-      const { authentication } = googleResponse;
-      Alert.alert('Success', 'Google Login Successful (Token received)');
-      // In a real app, you would send this token to your backend
+      Alert.alert('Success', 'Google Login Successful');
     }
   }, [googleResponse]);
 
   useEffect(() => {
     if (fbResponse?.type === 'success') {
-      const { authentication } = fbResponse;
-      Alert.alert('Success', 'Facebook Login Successful (Token received)');
+      Alert.alert('Success', 'Facebook Login Successful');
     }
   }, [fbResponse]);
 
@@ -68,7 +63,6 @@ const LoginScreen = () => {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
-    // Generate demo OTP for local/dev usage
     const code = String(Math.floor(100000 + Math.random() * 900000));
     setSentOtp(code);
     setShowOtp(true);
@@ -81,7 +75,6 @@ const LoginScreen = () => {
       return;
     }
     await loginWithPhoneOtp(phone, otp);
-    // Alert.alert('Success', 'Login successful!'); // Handled by AuthContext/Navigation
   };
 
   return (
@@ -126,7 +119,7 @@ const LoginScreen = () => {
 
               <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp}>
                 <Text style={styles.primaryButtonText}>Continue</Text>
-                <ArrowRight size={20} color={Colors.text.primary} style={{ marginLeft: 8 }} />
+                <ArrowRight size={20} color={Colors.primary} style={{ marginLeft: 8 }} />
               </TouchableOpacity>
             </>
           ) : (
@@ -168,7 +161,6 @@ const LoginScreen = () => {
               onPress={() => googlePromptAsync()}
               disabled={!googleRequest}
             >
-              {/* Using generic icon/text as we don't have SVGs handy, Lucide icons are great */}
               <Chrome size={20} color="#fff" style={{ marginRight: 8 }} />
               <Text style={styles.socialButtonText}>Google</Text>
             </TouchableOpacity>
@@ -226,20 +218,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: '#fff',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: '#fff',
     opacity: 0.8,
   },
   formCard: {
-    backgroundColor: Colors.surface,
-    marginHorizontal: Theme.spacing.lg,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
     marginTop: -40,
-    borderRadius: Theme.borderRadius.lg,
-    padding: Theme.spacing.lg,
+    borderRadius: 20,
+    padding: 20,
     ...Theme.shadows.large,
   },
   welcomeText: {
@@ -256,9 +248,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: Theme.borderRadius.md,
-    paddingHorizontal: Theme.spacing.md,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    paddingHorizontal: 15,
     height: 50,
     marginBottom: 16,
     borderWidth: 1,
@@ -275,7 +267,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: Colors.secondary,
     height: 50,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -285,7 +277,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.primary, // Yellow text on black button
+    color: Colors.primary,
   },
   textButton: {
     marginTop: 16,
@@ -325,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     height: 44,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     ...Theme.shadows.small,
@@ -338,5 +330,3 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
-
-

@@ -7,7 +7,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../src/context/AuthContext';
-import { AMLGraphService } from '../src/services/AMLGraphService';
 import { useMachine } from '@xstate/react';
 import { escrowMachine } from '../src/machines/escrowMachine';
 import { Routes } from '../src/types/navigation';
@@ -60,8 +59,10 @@ const BookingScreen = () => {
             // Transition to funding
             send({ type: 'PAYMENT_STARTED' });
 
-            // Phase 14: AML Structural Velocity Interdiction
-            const isFlagged = await AMLGraphService.evaluateVelocityGraph(lenderId, user.id, amount);
+            // Phase 14: AML Structural Velocity Interdiction (Moved to Backend)
+            // AML check is now strictly server-side within the BookingService transaction.
+            const isFlagged = false; // Emulated client response - actual block handled by tRPC
+
 
             if (isFlagged) {
               send({ type: 'PAYMENT_FAILED', error: 'AML_VELOCITY_VIOLATION' });

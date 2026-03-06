@@ -2,6 +2,8 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { BookingService } from '../services/BookingService';
 import { BookingRequestSchema } from '../schemas/booking';
+import { z } from 'zod';
+import * as admin from 'firebase-admin';
 
 // Context interface bridging Firebase Auth into tRPC
 export interface Context {
@@ -37,9 +39,22 @@ const guardedProcedure = t.procedure.use(requireAppCheck).use(requireAuth);
 // 3. Define the Router
 export const appRouter = t.router({
     // Generic Ping
-    health: t.procedure.query(() => {
+    health: t.procedure.use(requireAppCheck).query(() => {
         return 'Sahaay Engine is alive 🚀';
     }),
+
+    // Payment Status Poller
+    paymentStatus: guardedProcedure
+        .input(z.object({ bookingId: z.string(), signature: z.string() }))
+        .query(async ({ input, ctx }) => {
+            const db = admin.firestore();
+            const snap = await db.collection('payments').where('bookingId', '==', input.bookingId).limit(1).get();
+            if (snap.empty) {
+                return { status: 'processing' };
+            }
+            const payment = snap.docs[0].data();
+            return { status: payment.status };
+        }),
 
     // Booking Endpoint enforcing XState and Idempotency
     initiateBooking: guardedProcedure
@@ -68,7 +83,10 @@ export const appRouter = t.router({
 export type AppRouter = typeof appRouter;
 
 // 4. Firebase Cloud Function Adapter
-export const trpcFunction = onCall(async (request) => {
+export const trpcFunction = onCall({
+    enforceAppCheck: true,
+    maxInstances: 10
+}, async (request) => {
     // tRPC typically operates over HTTP, but we can bridge it over HTTPS Callables 
     // by manually invoking the router. A proper production setup uses trpc-express adapter or similar.
     // For this blueprint, we demonstrate the architectural boundary.
@@ -83,6 +101,8 @@ export const trpcFunction = onCall(async (request) => {
         return await caller.initiateBooking(data.input);
     } else if (data.path === 'health') {
         return await caller.health();
+    } else if (data.path === 'paymentStatus') {
+        return await caller.paymentStatus(data.input);
     }
 
     throw new HttpsError('not-found', 'tRPC Route not mapped in Callable Edge.');
