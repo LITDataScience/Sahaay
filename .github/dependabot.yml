@@ -1,27 +1,29 @@
 version: 2
 updates:
+  # Root Monorepo Dependencies
   - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "npm"
-    directory: "/backend"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "npm"
-    directory: "/backend/api"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "npm"
-    directory: "/frontend"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
 
+  # Frontend Workspace
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # eslint 9 is currently incompatible with eslint-config-expo flat configs
+      - dependency-name: "eslint"
+        versions: [">= 9.0.0"]
+
+  # Backend Workspace (Firebase Functions)
+  - package-ecosystem: "npm"
+    directory: "/firebase/functions"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
