@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-test] # Will physically not run if tests fail
     # Prevent expensive EAS builds from running on Dependabot PRs 
-    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || secrets.EXPO_TOKEN != '')
+    if: github.actor != 'dependabot[bot]'
     
     steps:
       - name: Checkout repository
@@ -80,7 +80,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: EAS Build Preview
-        if: github.event_name == 'pull_request' && secrets.EXPO_TOKEN != ''
+        if: github.event_name == 'pull_request'
         run: cd frontend && eas build --profile preview --platform android --non-interactive
 
       - name: EAS Build Production
