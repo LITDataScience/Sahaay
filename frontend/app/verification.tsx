@@ -82,7 +82,7 @@ export default function VerificationScreen() {
                     'Your identity and liveness have been securely verified.',
                     [{ text: 'Continue', onPress: () => router.back() }]
                 );
-            } catch (_e) {
+            } catch {
                 setIsVerifying(false);
                 Alert.alert('Verification Failed', 'Something went wrong during verification.');
             }

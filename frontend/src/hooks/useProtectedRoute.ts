@@ -35,5 +35,5 @@ export function useProtectedRoute() {
             // Redirect authenticated users away from login
             router.replace('/(tabs)' as any);
         }
-    }, [user, isLoading, segments]);
+    }, [user, isLoading, segments, router]);
 }
