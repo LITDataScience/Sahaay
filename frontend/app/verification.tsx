@@ -82,9 +82,14 @@ export default function VerificationScreen() {
                     'Your identity and liveness have been securely verified.',
                     [{ text: 'Continue', onPress: () => router.back() }]
                 );
-            } catch {
+            } catch (error) {
                 setIsVerifying(false);
-                Alert.alert('Verification Failed', 'Something went wrong during verification.');
+                Alert.alert(
+                    'Verification Pending Backend Approval',
+                    error instanceof Error
+                        ? error.message
+                        : 'This verification flow cannot approve payout access on its own yet.'
+                );
             }
         }, 2000);
     };

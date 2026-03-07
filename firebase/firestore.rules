@@ -15,7 +15,7 @@ service cloud.firestore {
       
       // Updates must not tamper with internal KYC or reputation scores
       allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reputation', 'reputationScore', 'isVerified', 'kycStatus', 'beneficiaryId']);
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reputation', 'reputationScore', 'isVerified', 'kycStatus', 'beneficiaryId', 'authProvider', 'publicKey', 'createdAt', 'updatedAt']);
                     
       // Only backend admin SDK can create new verified users via Auth triggers
       allow create: if false;
