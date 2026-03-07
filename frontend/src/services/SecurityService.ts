@@ -4,6 +4,7 @@
 // SPDX-Header-End
 
 import * as Crypto from 'expo-crypto';
+// eslint-disable-next-line import/no-unresolved
 import * as Keychain from 'react-native-keychain';
 
 const PRIVATE_KEY_ALIAS = 'sahaay.device.privateKey';
@@ -79,7 +80,7 @@ export const SecurityService = {
             // This is just a placeholder representing the integration.
             console.log('[SecurityService] RASP check executing with freerasp-react-native');
             return true;
-        } catch (e) {
+        } catch {
             return false;
         }
     }

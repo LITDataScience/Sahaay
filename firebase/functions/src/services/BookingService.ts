@@ -110,8 +110,9 @@ export class BookingService {
             }
 
             // 5. Native State Machine enforcement
-            // In XState V5, machines don't have .initialState directly; we resolve the initial state using createActor
+            // In XState V5, we persist the full snapshot for rehydration
             const actor = createActor(EscrowMachine).start();
+            const initialSnapshot = actor.getPersistedSnapshot();
             const initialStatus = actor.getSnapshot().value;
 
             const bookingRef = this.db.collection('bookings').doc();
@@ -129,7 +130,8 @@ export class BookingService {
                 platformFee,
                 totalAmount,
                 currency: 'INR',
-                status: initialStatus, // "pending" mathematically guaranteed
+                status: initialStatus, // "pending"
+                escrowState: initialSnapshot, // Persistent JSON snapshot
                 paymentStatus: 'pending',
                 idempotencyKey,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -139,9 +141,16 @@ export class BookingService {
             transaction.set(bookingRef, bookingDoc);
 
             // 6. Transition State to awaiting_payment manually
-            // Actor handles the transition natively in V5
             actor.send({ type: 'payment_intent_created' });
-            const stateAfterIntent = actor.getSnapshot().value;
+            const snapshotAfterIntent = actor.getPersistedSnapshot();
+            const statusAfterIntent = actor.getSnapshot().value;
+
+            // Update booking doc with transitioned state
+            transaction.update(bookingRef, {
+                status: statusAfterIntent,
+                escrowState: snapshotAfterIntent,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
 
             const paymentRef = this.db.collection('payments').doc();
             transaction.set(paymentRef, {
@@ -152,7 +161,7 @@ export class BookingService {
                 amount: totalAmount,
                 currency: 'INR',
                 method: 'upi_intent',
-                status: stateAfterIntent, // "awaiting_payment"
+                status: statusAfterIntent, // "awaiting_payment"
                 escrow: true,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -162,7 +171,7 @@ export class BookingService {
             transaction.set(idempotencyRef, {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent,
+                status: statusAfterIntent,
                 totalAmount,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             });
@@ -170,8 +179,51 @@ export class BookingService {
             return {
                 bookingId: bookingRef.id,
                 paymentId: paymentRef.id,
-                status: stateAfterIntent, // Will type-cast into the router natively
+                status: statusAfterIntent,
                 totalAmount
+            };
+        });
+    }
+
+    /**
+     * Rehydrates a booking from its persistent Firestore snapshot and executes a transition.
+     */
+    async transitionBooking(bookingId: string, event: any) {
+        const bookingRef = this.db.collection('bookings').doc(bookingId);
+
+        return await this.db.runTransaction(async (transaction) => {
+            const bookingSnap = await transaction.get(bookingRef);
+            if (!bookingSnap.exists) {
+                throw new Error("Booking not found.");
+            }
+
+            const bookingData = bookingSnap.data();
+            const persistedSnapshot = bookingData?.escrowState;
+
+            if (!persistedSnapshot) {
+                throw new Error("Critical Failure: Booking has no persistent escrow state.");
+            }
+
+            // Rehydrate Actor from Snapshot
+            const actor = createActor(EscrowMachine, { snapshot: persistedSnapshot }).start();
+
+            // Execute Transition
+            actor.send(event);
+
+            const nextSnapshot = actor.getPersistedSnapshot();
+            const nextStatus = actor.getSnapshot().value;
+
+            // Commit new state back to Firestore
+            transaction.update(bookingRef, {
+                status: nextStatus as string,
+                escrowState: nextSnapshot,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+            return {
+                bookingId,
+                previousStatus: bookingData?.status,
+                newStatus: nextStatus as string
             };
         });
     }

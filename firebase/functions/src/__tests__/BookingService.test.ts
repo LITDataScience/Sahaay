@@ -113,6 +113,41 @@ describe('EscrowMachine — State Transitions', () => {
     });
 });
 
+// ─── XState Persistence & Rehydration Tests ──────────────────────────────────
+
+import { createActor } from 'xstate';
+
+describe('EscrowMachine — Persistence & Rehydration', () => {
+    it('should serialize and rehydrate the initial state', () => {
+        const actor = createActor(EscrowMachine).start();
+        const snapshot = actor.getPersistedSnapshot();
+
+        expect(snapshot).toBeDefined();
+        expect(actor.getSnapshot().value).toBe('pending');
+
+        // Rehydrate in a new actor
+        const newActor = createActor(EscrowMachine, { snapshot }).start();
+        expect(newActor.getSnapshot().value).toBe('pending');
+    });
+
+    it('should rehydrate into a mid-lifecycle state (escrow_held)', () => {
+        const actor = createActor(EscrowMachine).start();
+        actor.send({ type: 'payment_intent_created' });
+        actor.send({ type: 'payment_succeeded' });
+
+        const snapshot = actor.getPersistedSnapshot();
+        expect(actor.getSnapshot().value).toBe('escrow_held');
+
+        // Rehydrate
+        const rehydratedActor = createActor(EscrowMachine, { snapshot }).start();
+        expect(rehydratedActor.getSnapshot().value).toBe('escrow_held');
+
+        // Continue transition from rehydrated state
+        rehydratedActor.send({ type: 'item_returned' });
+        expect(rehydratedActor.getSnapshot().value).toBe('completed');
+    });
+});
+
 // ─── Zod Schema Validation Tests ─────────────────────────────────────────────
 
 describe('BookingRequestSchema — Validation', () => {
