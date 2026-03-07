@@ -18,7 +18,6 @@ interface GeniusRequest {
 }
 
 export const sahaayGenius = onRequest({
-    enforceAppCheck: true,
     maxInstances: 10
 }, (req, res) => {
     corsHandler(req, res, async () => {
