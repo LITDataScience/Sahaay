@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAppTheme } from '../../../theme/provider';
 
 type Props = {
 	categories: string[];
@@ -13,6 +14,9 @@ type Props = {
 };
 
 const CategoryChips: React.FC<Props> = ({ categories, selected, onSelect }) => {
+    const { theme } = useAppTheme();
+    const styles = createStyles(theme);
+
 	return (
 		<View style={styles.wrapper}>
 			<ScrollView
@@ -33,30 +37,34 @@ const CategoryChips: React.FC<Props> = ({ categories, selected, onSelect }) => {
 	);
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSheet.create({
 	wrapper: {
-		backgroundColor: '#fff',
+		backgroundColor: 'transparent',
 	},
 	container: {
-		paddingHorizontal: 15,
-		paddingVertical: 10,
+		paddingHorizontal: 0,
+		paddingVertical: 4,
 	},
 	chip: {
-		backgroundColor: '#f0f0f0',
-		paddingHorizontal: 14,
-		paddingVertical: 8,
-		borderRadius: 18,
+		backgroundColor: theme.colors.surfaceElevated,
+		paddingHorizontal: 16,
+		paddingVertical: 10,
+		borderRadius: theme.radius.pill,
 		marginRight: 10,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
 	},
 	chipActive: {
-		backgroundColor: '#007AFF',
+		backgroundColor: theme.colors.accent,
+        borderColor: theme.colors.accent,
 	},
 	text: {
 		fontSize: 14,
-		color: '#333',
+		color: theme.colors.textPrimary,
+        fontWeight: '600',
 	},
 	textActive: {
-		color: '#fff',
+		color: '#181411',
 		fontWeight: '600',
 	},
 });

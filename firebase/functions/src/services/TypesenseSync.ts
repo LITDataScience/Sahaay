@@ -51,11 +51,22 @@ export class TypesenseSync {
             id: itemId,
             title: data.title,
             description: data.description,
-            price: data.price,
+            category: data.category,
+            condition: data.condition,
+            price: data.pricePerDay || data.price,
+            pricePerDay: data.pricePerDay || data.price,
             deposit: data.deposit,
             ownerId: data.ownerId,
+            ownerName: data.ownerName || 'Trusted lender',
+            locality: data.locality || '',
+            city: data.city || '',
+            state: data.state || '',
+            radiusKm: data.radiusKm || data.visibility?.radiusKm || 0,
+            payoutMethod: data.payoutConfig?.payoutMethod || 'upi',
+            location: data.location
+                ? [data.location.latitude, data.location.longitude]
+                : null,
             createdAt: data.createdAt?.toMillis() || Date.now()
-            // In a full implementation, we would extract lat/lng here into [lat, lng] for radius querying.
         };
 
         try {

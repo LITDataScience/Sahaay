@@ -1,48 +1,31 @@
 import Colors from './Colors';
+import { lightTheme } from '../theme/tokens';
 
 const Theme = {
     shadows: {
-        small: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-            elevation: 2,
-        },
-        medium: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 6,
-            elevation: 4,
-        },
-        large: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
-            elevation: 8,
-        }
+        small: lightTheme.shadows.soft,
+        medium: lightTheme.shadows.medium,
+        large: lightTheme.shadows.medium,
     },
     spacing: {
-        xs: 4,
-        sm: 8,
-        md: 16,
-        lg: 24,
-        xl: 32,
+        xs: lightTheme.spacing.xs,
+        sm: lightTheme.spacing.sm,
+        md: lightTheme.spacing.md,
+        lg: lightTheme.spacing.lg,
+        xl: lightTheme.spacing.xl,
     },
     borderRadius: {
-        sm: 8,
-        md: 12,
-        lg: 20,
-        full: 9999,
+        sm: lightTheme.radius.sm,
+        md: lightTheme.radius.md,
+        lg: lightTheme.radius.lg,
+        full: lightTheme.radius.pill,
     },
     typography: {
-        h1: { fontSize: 28, fontWeight: '800' },
-        h2: { fontSize: 22, fontWeight: '700' },
-        body: { fontSize: 16, fontWeight: '400' },
+        h1: { fontSize: lightTheme.typography.title.fontSize, fontWeight: lightTheme.typography.title.fontWeight },
+        h2: { fontSize: lightTheme.typography.section.fontSize, fontWeight: lightTheme.typography.section.fontWeight },
+        body: { fontSize: lightTheme.typography.body.fontSize, fontWeight: lightTheme.typography.body.fontWeight },
         caption: { fontSize: 12, color: Colors.text.secondary },
-    }
+    },
 } as const;
 
 export default Theme;

@@ -26,6 +26,12 @@ export const Routes = {
         Booking: '/booking' as Href<string>,
         Handshake: '/handshake' as Href<string>,
     },
+    Listing: {
+        Create: '/listing/create' as Href<string>,
+        Location: '/listing/location' as Href<string>,
+        Pricing: '/listing/pricing' as Href<string>,
+        Review: '/listing/review' as Href<string>,
+    },
     Dynamic: {
         ItemDetails: (id: string): Href<string> => `/item/${id}` as Href<string>,
     }

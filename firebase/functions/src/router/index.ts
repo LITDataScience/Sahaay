@@ -4,6 +4,8 @@ import { BookingService } from '../services/BookingService';
 import { BookingRequestSchema } from '../schemas/booking';
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
+import { ListingService } from '../services/ListingService';
+import { CreateListingSchema, SearchListingsSchema } from '../schemas/listing';
 
 // Context interface bridging Firebase Auth into tRPC
 export interface Context {
@@ -35,6 +37,7 @@ const requireAppCheck = t.middleware(({ ctx, next }) => {
 
 // Guard procedure combining auth and app check
 const guardedProcedure = t.procedure.use(requireAppCheck).use(requireAuth);
+const appCheckedProcedure = t.procedure.use(requireAppCheck);
 
 // 3. Define the Router
 export const appRouter = t.router({
@@ -42,6 +45,38 @@ export const appRouter = t.router({
     health: t.procedure.use(requireAppCheck).query(() => {
         return 'Sahaay Engine is alive 🚀';
     }),
+
+    createItem: guardedProcedure
+        .input(CreateListingSchema)
+        .mutation(async ({ input, ctx }) => {
+            try {
+                const listingService = new ListingService();
+                const result = await listingService.createItemListing(input, ctx.auth.uid);
+                return { success: true, item: result };
+            } catch (error: any) {
+                console.error('tRPC Create Listing Error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: error.message || 'Listing creation failed',
+                });
+            }
+        }),
+
+    searchItemsNearby: appCheckedProcedure
+        .input(SearchListingsSchema)
+        .query(async ({ input }) => {
+            try {
+                const listingService = new ListingService();
+                const items = await listingService.searchItemsNearby(input);
+                return { items };
+            } catch (error: any) {
+                console.error('tRPC Nearby Search Error:', error);
+                throw new TRPCError({
+                    code: 'INTERNAL_SERVER_ERROR',
+                    message: error.message || 'Nearby item search failed',
+                });
+            }
+        }),
 
     // Payment Status Poller
     paymentStatus: guardedProcedure
@@ -99,6 +134,10 @@ export const trpcFunction = onCall({
 
     if (data.path === 'initiateBooking') {
         return await caller.initiateBooking(data.input);
+    } else if (data.path === 'createItem') {
+        return await caller.createItem(data.input);
+    } else if (data.path === 'searchItemsNearby') {
+        return await caller.searchItemsNearby(data.input);
     } else if (data.path === 'health') {
         return await caller.health();
     } else if (data.path === 'paymentStatus') {

@@ -3,22 +3,29 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
-import Colors from '../../src/constants/Colors';
-import Theme from '../../src/constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, HelpCircle, ShieldAlert, ShieldCheck, Handshake } from 'lucide-react-native';
+import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, HelpCircle, ShieldAlert, ShieldCheck, Handshake, MoonStar, PlusCircle, Coins } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Routes } from '../../src/types/navigation';
+import { useAppTheme } from '../../src/theme/provider';
+import { getLocalPublishedListings } from '../../src/features/listings/storage';
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const { theme, mode, toggleTheme } = useAppTheme();
+  const styles = createStyles(theme);
   const { user, logout, updateProfile } = useAuth();
   const initials = useMemo(() => user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'U', [user]);
   const [name, setName] = useState(user?.name || '');
   const [isEditing, setIsEditing] = useState(false);
+  const [listingCount, setListingCount] = useState(0);
+
+  useEffect(() => {
+    getLocalPublishedListings().then((listings) => setListingCount(listings.length));
+  }, []);
 
   const onSave = async () => {
     await updateProfile({ name });
@@ -27,7 +34,7 @@ const ProfileScreen = () => {
   };
 
   const menuItems = [
-    { icon: List, label: 'My Listings', onPress: () => { } },
+    { icon: List, label: 'My Listings', onPress: () => router.push(Routes.App.Home) },
     { icon: ShoppingBag, label: 'My Bookings', onPress: () => { } },
     { icon: Handshake, label: 'P2P Escrow Handover', onPress: () => router.push(Routes.Modals.Handshake) },
     { icon: Heart, label: 'My Reviews', onPress: () => { } },
@@ -39,16 +46,21 @@ const ProfileScreen = () => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <LinearGradient
-          colors={[Colors.primary, Colors.darkPrimary]}
+          colors={[theme.colors.surfaceAlt, theme.colors.backgroundMuted]}
           style={styles.headerGradient}
         >
           <View style={styles.headerContent}>
+            <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+              <MoonStar size={16} color={theme.colors.textPrimary} />
+              <Text style={styles.themeToggleText}>{mode === 'dark' ? 'Dark' : 'Light'}</Text>
+            </TouchableOpacity>
+
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>
               </View>
               <TouchableOpacity style={styles.editAvatarButton}>
-                <Edit2 size={16} color={Colors.surface} />
+                <Edit2 size={16} color={theme.colors.surface} />
               </TouchableOpacity>
             </View>
 
@@ -62,13 +74,13 @@ const ProfileScreen = () => {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>12</Text>
+                <Text style={styles.statValue}>{listingCount}</Text>
                 <Text style={styles.statLabel}>Listings</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>5</Text>
-                <Text style={styles.statLabel}>Borrowed</Text>
+                <Text style={styles.statValue}>90%</Text>
+                <Text style={styles.statLabel}>You keep</Text>
               </View>
             </View>
           </View>
@@ -80,7 +92,7 @@ const ProfileScreen = () => {
         {user?.isVerified ? (
           <View style={[styles.verificationCard, styles.verifiedCard]}>
             <View style={styles.verificationIcon}>
-              <ShieldCheck size={24} color="#2e7d32" />
+              <ShieldCheck size={24} color={theme.colors.success} />
             </View>
             <View style={styles.verificationTextContainer}>
               <Text style={styles.verifiedTitle}>Identity Verified</Text>
@@ -92,8 +104,8 @@ const ProfileScreen = () => {
             style={[styles.verificationCard, styles.unverifiedCard]}
             onPress={() => router.push(Routes.Auth.Verification)}
           >
-            <View style={[styles.verificationIcon, { backgroundColor: 'rgba(211, 47, 47, 0.1)' }]}>
-              <ShieldAlert size={24} color="#d32f2f" />
+            <View style={[styles.verificationIcon, { backgroundColor: theme.colors.surfaceAlt }]}>
+              <ShieldAlert size={24} color={theme.colors.danger} />
             </View>
             <View style={styles.verificationTextContainer}>
               <Text style={styles.unverifiedTitle}>Verification Pending</Text>
@@ -107,6 +119,19 @@ const ProfileScreen = () => {
       </View>
 
       <View style={styles.content}>
+        <TouchableOpacity style={styles.earningsCard} onPress={() => router.push(Routes.Listing.Create)}>
+          <View style={styles.earningsIcon}>
+            <Coins size={20} color={theme.colors.accentStrong} />
+          </View>
+          <View style={styles.earningsCopy}>
+            <Text style={styles.earningsTitle}>Launch a premium earning asset</Text>
+            <Text style={styles.earningsSubtitle}>
+              Add an item, set a visibility radius, and keep 90% of the rental revenue.
+            </Text>
+          </View>
+          <PlusCircle size={18} color={theme.colors.accentStrong} />
+        </TouchableOpacity>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Personal Details</Text>
@@ -124,6 +149,7 @@ const ProfileScreen = () => {
                   onChangeText={setName}
                   style={styles.input}
                   placeholder="Enter your name"
+                  placeholderTextColor={theme.colors.textMuted}
                 />
               ) : (
                 <Text style={styles.value}>{user?.name || 'Not set'}</Text>
@@ -147,17 +173,17 @@ const ProfileScreen = () => {
                 onPress={item.onPress}
               >
                 <View style={styles.menuIconContainer}>
-                  <item.icon size={20} color={Colors.secondary} />
+                  <item.icon size={20} color={theme.colors.textPrimary} />
                 </View>
                 <Text style={styles.menuText}>{item.label}</Text>
-                <item.icon size={16} color={Colors.text.placeholder} style={styles.chevron} />
+                <item.icon size={16} color={theme.colors.textMuted} style={styles.chevron} />
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <LogOut size={20} color={Colors.surface} style={{ marginRight: 8 }} />
+          <LogOut size={20} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
@@ -167,10 +193,10 @@ const ProfileScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.colors.background,
   },
   header: {
     height: 320,
@@ -178,13 +204,31 @@ const styles = StyleSheet.create({
   },
   headerGradient: {
     flex: 1,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: theme.radius.xl,
+    borderBottomRightRadius: theme.radius.xl,
     paddingTop: 60,
   },
   headerContent: {
     alignItems: 'center',
     paddingHorizontal: 20,
+  },
+  themeToggle: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  themeToggleText: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
   },
   avatarContainer: {
     position: 'relative',
@@ -194,51 +238,53 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.surface,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: theme.colors.borderStrong,
   },
   avatarText: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: Colors.primary,
+    color: theme.colors.accentStrong,
   },
   editAvatarButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: Colors.secondary,
+    backgroundColor: theme.colors.textPrimary,
     width: 32,
     height: 32,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.surface,
+    borderColor: theme.colors.surface,
   },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.text.primary, // Dark text on yellow bg (if yellow is light enough) or white if dark bg
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   phone: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: theme.colors.textSecondary,
     opacity: 0.8,
     marginBottom: 24,
   },
   statsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: Theme.borderRadius.lg,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
     paddingVertical: 16,
     paddingHorizontal: 24,
     width: '100%',
     justifyContent: 'space-between',
-    ...Theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.soft,
   },
   statItem: {
     alignItems: 'center',
@@ -247,20 +293,20 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: theme.colors.textPrimary,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   statDivider: {
     width: 1,
     height: '100%',
-    backgroundColor: Colors.border,
+    backgroundColor: theme.colors.border,
   },
   verificationContainer: {
-    paddingHorizontal: Theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
     marginTop: -20,
     marginBottom: 20,
     zIndex: 10,
@@ -268,25 +314,25 @@ const styles = StyleSheet.create({
   verificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Theme.spacing.md,
-    borderRadius: Theme.borderRadius.lg,
-    ...Theme.shadows.medium,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+    ...theme.shadows.soft,
   },
   verifiedCard: {
-    backgroundColor: '#f1f8e9',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#c5e1a5',
+    borderColor: theme.colors.borderStrong,
   },
   unverifiedCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#ffcdd2',
+    borderColor: theme.colors.borderStrong,
   },
   verificationIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+    backgroundColor: theme.colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -297,37 +343,68 @@ const styles = StyleSheet.create({
   verifiedTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2e7d32',
+    color: theme.colors.success,
   },
   verifiedSubtitle: {
     fontSize: 12,
-    color: '#33691e',
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   unverifiedTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#d32f2f',
+    color: theme.colors.danger,
   },
   unverifiedSubtitle: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: theme.colors.textSecondary,
     marginTop: 2,
   },
   verifyAction: {
-    backgroundColor: '#d32f2f',
+    backgroundColor: theme.colors.accent,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: Theme.borderRadius.sm,
+    borderRadius: theme.radius.sm,
   },
   verifyActionText: {
-    color: '#fff',
+    color: '#181411',
     fontSize: 12,
     fontWeight: 'bold',
   },
   content: {
-    paddingHorizontal: Theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
     paddingBottom: 40,
+  },
+  earningsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    padding: theme.spacing.md,
+    marginBottom: 24,
+  },
+  earningsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  earningsCopy: {
+    flex: 1,
+  },
+  earningsTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  earningsSubtitle: {
+    color: theme.colors.textSecondary,
+    lineHeight: 19,
   },
   section: {
     marginBottom: 24,
@@ -341,48 +418,50 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.text.primary,
+    color: theme.colors.textPrimary,
     marginBottom: 12,
   },
   editButtonText: {
-    color: Colors.secondary, // Use secondary (black) or primary (yellow) based on preference
+    color: theme.colors.accentStrong,
     fontWeight: '600',
   },
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Theme.borderRadius.md,
-    padding: Theme.spacing.md,
-    ...Theme.shadows.small,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.soft,
   },
   inputGroup: {
     marginBottom: 8,
   },
   label: {
     fontSize: 12,
-    color: Colors.text.secondary,
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
   value: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: theme.colors.textPrimary,
     fontWeight: '500',
   },
   input: {
     fontSize: 16,
-    color: Colors.text.primary,
+    color: theme.colors.textPrimary,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.colors.border,
     paddingVertical: 8,
   },
   saveButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: theme.colors.accent,
     padding: 12,
-    borderRadius: Theme.borderRadius.sm,
+    borderRadius: theme.radius.sm,
     alignItems: 'center',
     marginTop: 12,
   },
   saveButtonText: {
-    color: Colors.text.primary, // Dark text on yellow button
+    color: '#181411',
     fontWeight: 'bold',
   },
   menuItem: {
@@ -390,7 +469,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: theme.colors.border,
   },
   lastMenuItem: {
     borderBottomWidth: 0,
@@ -399,7 +478,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.background,
+    backgroundColor: theme.colors.surfaceAlt,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -407,16 +486,16 @@ const styles = StyleSheet.create({
   menuText: {
     flex: 1,
     fontSize: 16,
-    color: Colors.text.primary,
+    color: theme.colors.textPrimary,
   },
   chevron: {
     // Lucide icon style
   },
   logoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#FF3B30', // Keep red for danger action
+    backgroundColor: theme.colors.danger,
     padding: 16,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
@@ -428,7 +507,7 @@ const styles = StyleSheet.create({
   },
   versionText: {
     textAlign: 'center',
-    color: Colors.text.secondary,
+    color: theme.colors.textSecondary,
     marginTop: 20,
     fontSize: 12,
   },

@@ -3,30 +3,45 @@
 // © 2025 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, MapPin, SlidersHorizontal } from 'lucide-react-native';
+import { MapPin, Plus, SlidersHorizontal } from 'lucide-react-native';
 import SearchBar from '../../src/shared/ui/SearchBar';
 import CategoryChips from '../../src/features/listings/ui/CategoryChips';
 import ItemCard from '../../src/features/listings/ui/ItemCard';
-import Colors from '../../src/constants/Colors';
-import Theme from '../../src/constants/Theme';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/lib/supabase';
+import { useAppTheme } from '../../src/theme/provider';
+import { getLocalPublishedListings } from '../../src/features/listings/storage';
+import { PublishedListing } from '../../src/features/listings/types';
+import { Routes } from '../../src/types/navigation';
 
 const AnyFlashList = FlashList as any;
 
 const categoriesData = ['All', 'Electronics', 'Tools', 'Appliances', 'Fashion', 'Sports'];
 
+type FeedItem = {
+  id: string;
+  title: string;
+  price: number;
+  deposit: number;
+  image: string;
+  owner: string;
+  distance: string;
+  locality?: string;
+  category?: string;
+  raw: Record<string, unknown>;
+};
+
 const HomeScreen = () => {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = createStyles(theme);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-
-  // Phase 12: Supabase Realtime Feed
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,17 +49,21 @@ const HomeScreen = () => {
 
     const fetchItems = async () => {
       setIsLoading(true);
-      let q = supabase.from('items').select('*');
-      if (category !== 'All') q = q.eq('category', category);
-      if (query.length > 2) q = q.ilike('title', `%${query}%`);
-
-      const { data, error: qError } = await q;
+      const { data, error: qError } = await supabase.from('items').select('*');
+      const localListings = await getLocalPublishedListings();
+      const remoteListings = ((data as Record<string, unknown>[] | null) ?? []).map((item) => normalizeRemoteItem(item));
+      const merged = mergeListings(remoteListings, localListings.map(normalizeLocalListing));
+      const filtered = merged.filter((item) => {
+        const matchesCategory = category === 'All' || item.category === category;
+        const matchesQuery = query.length < 2 || item.title.toLowerCase().includes(query.toLowerCase());
+        return matchesCategory && matchesQuery;
+      });
 
       if (active) {
         if (qError) {
           console.error(qError);
         } else {
-          setItems(data as any[] || []);
+          setItems(filtered);
         }
         setIsLoading(false);
       }
@@ -66,22 +85,23 @@ const HomeScreen = () => {
 
   const { width } = useWindowDimensions();
   const numColumns = width > 600 ? 3 : 2;
+  const featuredLabel = useMemo(() => `${items.length} premium items nearby`, [items.length]);
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[Colors.primary, Colors.darkPrimary]}
+        colors={[theme.colors.surfaceAlt, theme.colors.backgroundMuted]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <Text style={styles.title}>Sahaay</Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Search color="#fff" size={24} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <MapPin color="#fff" size={24} />
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.eyebrow}>Borrow Genius</Text>
+            <Text style={styles.title}>Sahaay</Text>
+            <Text style={styles.subtitle}>Curated things from people near you.</Text>
+          </View>
+          <View style={styles.headerBadge}>
+            <MapPin color={theme.colors.accentStrong} size={16} />
+            <Text style={styles.headerBadgeText}>{featuredLabel}</Text>
           </View>
         </View>
 
@@ -102,19 +122,26 @@ const HomeScreen = () => {
             onSelect={setCategory}
           />
           <TouchableOpacity style={styles.filterBtn}>
-            <SlidersHorizontal color={Colors.text.primary} size={20} />
+            <SlidersHorizontal color={theme.colors.textPrimary} size={20} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Nearby premium listings</Text>
+          <TouchableOpacity onPress={() => router.push(Routes.Listing.Create)}>
+            <Text style={styles.sectionAction}>List yours</Text>
           </TouchableOpacity>
         </View>
 
         <AnyFlashList
           data={items}
-          renderItem={({ item }: any) => (
+          renderItem={({ item }: { item: FeedItem }) => (
             <ItemCard
               item={item}
-              onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } } as any)}
+              onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id, itemData: JSON.stringify(item.raw) } } as any)}
             />
           )}
-          keyExtractor={(item: any) => item.id}
+          keyExtractor={(item: FeedItem) => item.id}
           numColumns={numColumns}
           estimatedItemSize={280}
           contentContainerStyle={styles.listContent}
@@ -125,44 +152,117 @@ const HomeScreen = () => {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/listing/create' as any)}
+        onPress={() => router.push(Routes.Listing.Create)}
       >
-        <Plus color="#fff" size={28} />
+        <Plus color="#181411" size={28} />
       </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+function normalizeRemoteItem(item: Record<string, unknown>): FeedItem {
+  const price = Number(item.price ?? item.pricePerDay ?? 0);
+  const deposit = Number(item.deposit ?? 0);
+  const title = String(item.title ?? 'Untitled item');
+  const image = String(item.image ?? 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=800&q=80');
+  const owner = String(item.owner ?? item.ownerId ?? 'Trusted lender');
+  const locality = String(item.locality ?? item.city ?? 'Nearby');
+  const category = String(item.category ?? 'Electronics');
+
+  return {
+    id: String(item.id ?? `${title}-${price}`),
+    title,
+    price,
+    deposit,
+    image,
+    owner,
+    distance: 'Near you',
+    locality,
+    category,
+    raw: {
+      ...item,
+      price,
+      deposit,
+      image,
+      owner,
+      locality,
+    },
+  };
+}
+
+function normalizeLocalListing(item: PublishedListing): FeedItem {
+  return {
+    id: item.id,
+    title: item.title,
+    price: item.pricePerDay,
+    deposit: item.deposit,
+    image: item.image,
+    owner: item.owner,
+    distance: item.distance,
+    locality: item.locality,
+    category: item.category,
+    raw: item,
+  };
+}
+
+function mergeListings(remote: FeedItem[], local: FeedItem[]) {
+  const map = new Map<string, FeedItem>();
+  [...remote, ...local].forEach((item) => map.set(item.id, item));
+  return [...map.values()];
+}
+
+const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.colors.background,
   },
   header: {
     paddingTop: 60,
-    paddingBottom: 25,
+    paddingBottom: 28,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: theme.radius.xl,
+    borderBottomRightRadius: theme.radius.xl,
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
+    gap: 14,
+  },
+  eyebrow: {
+    color: theme.colors.accentStrong,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.5,
+    color: theme.colors.textPrimary,
+    letterSpacing: -0.6,
   },
-  headerIcons: {
+  subtitle: {
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    fontSize: 15,
+  },
+  headerBadge: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.pill,
+    ...theme.shadows.soft,
   },
-  iconButton: {
-    marginLeft: 15,
-    padding: 5,
+  headerBadgeText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   searchContainer: {
     marginTop: 5,
@@ -179,10 +279,28 @@ const styles = StyleSheet.create({
   },
   filterBtn: {
     padding: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
     marginLeft: 10,
-    ...Theme.shadows.small,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.soft,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  sectionAction: {
+    color: theme.colors.accentStrong,
+    fontWeight: '700',
   },
   listContent: {
     paddingHorizontal: 10,
@@ -195,11 +313,11 @@ const styles = StyleSheet.create({
     right: 25,
     width: 60,
     height: 60,
-    borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.primary,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Theme.shadows.medium,
+    ...theme.shadows.medium,
     elevation: 5,
   },
 });
