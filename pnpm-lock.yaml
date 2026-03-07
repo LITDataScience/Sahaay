@@ -259,6 +259,9 @@ importers:
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.14
+      '@types/react-native-keychain':
+        specifier: ^3.1.0
+        version: 3.1.0
       eslint:
         specifier: ^8.57.1
         version: 8.57.1
@@ -2450,6 +2453,10 @@ packages:
 
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
+
+  '@types/react-native-keychain@3.1.0':
+    resolution: {integrity: sha512-L2YWEAESxivmuCnipXepK3kv/SCJ2mcekWwfc8AoKcZb+BVOWMQgabPovuLacf3xcbN10kbF7MEvfRTH9FZaaw==}
+    deprecated: This is a stub types definition. react-native-keychain provides its own type definitions, so you do not need this installed.
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
@@ -5778,6 +5785,10 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-keychain@10.0.0:
+    resolution: {integrity: sha512-YzPKSAnSzGEJ12IK6CctNLU79T1W15WDrElRQ+1/FsOazGX9ucFPTQwgYe8Dy8jiSEDJKM4wkVa3g4lD2Z+Pnw==}
+    engines: {node: '>=16'}
 
   react-native-qrcode-svg@6.3.21:
     resolution: {integrity: sha512-6vcj4rcdpWedvphDR+NSJcudJykNuLgNGFwm2p4xYjR8RdyTzlrELKI5LkO4ANS9cQUbqsfkpippPv64Q2tUtA==}
@@ -9919,6 +9930,10 @@ snapshots:
   '@types/qs@6.15.0': {}
 
   '@types/range-parser@1.2.7': {}
+
+  '@types/react-native-keychain@3.1.0':
+    dependencies:
+      react-native-keychain: 10.0.0
 
   '@types/react@19.2.14':
     dependencies:
@@ -14102,6 +14117,8 @@ snapshots:
     dependencies:
       react: 19.2.4
       react-native: 0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)
+
+  react-native-keychain@10.0.0: {}
 
   react-native-qrcode-svg@6.3.21(react-native-svg@15.15.3(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4):
     dependencies:
