@@ -7,15 +7,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { MapPin, Plus, SlidersHorizontal } from 'lucide-react-native';
 import SearchBar from '../../src/shared/ui/SearchBar';
 import CategoryChips from '../../src/features/listings/ui/CategoryChips';
 import ItemCard from '../../src/features/listings/ui/ItemCard';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../src/lib/supabase';
 import { useAppTheme } from '../../src/theme/provider';
 import { getLocalPublishedListings } from '../../src/features/listings/storage';
 import { PublishedListing } from '../../src/features/listings/types';
+import { useNearbyListings } from '../../src/entities/listing/api';
 import { Routes } from '../../src/types/navigation';
 
 const AnyFlashList = FlashList as any;
@@ -41,51 +42,74 @@ const HomeScreen = () => {
   const styles = createStyles(theme);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const [items, setItems] = useState<FeedItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [localListings, setLocalListings] = useState<FeedItem[]>([]);
 
   useEffect(() => {
     let active = true;
 
-    const fetchItems = async () => {
-      setIsLoading(true);
-      const { data, error: qError } = await supabase.from('items').select('*');
-      const localListings = await getLocalPublishedListings();
-      const remoteListings = ((data as Record<string, unknown>[] | null) ?? []).map((item) => normalizeRemoteItem(item));
-      const merged = mergeListings(remoteListings, localListings.map(normalizeLocalListing));
-      const filtered = merged.filter((item) => {
-        const matchesCategory = category === 'All' || item.category === category;
-        const matchesQuery = query.length < 2 || item.title.toLowerCase().includes(query.toLowerCase());
-        return matchesCategory && matchesQuery;
-      });
-
+    getLocalPublishedListings().then((listings) => {
       if (active) {
-        if (qError) {
-          console.error(qError);
-        } else {
-          setItems(filtered);
-        }
-        setIsLoading(false);
+        setLocalListings(listings.map(normalizeLocalListing));
       }
-    };
-
-    fetchItems();
-
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel('public:items')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, fetchItems)
-      .subscribe();
+    });
 
     return () => {
       active = false;
-      supabase.removeChannel(channel);
     };
-  }, [category, query]);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== 'granted') {
+          return;
+        }
+
+        const current = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        if (active) {
+          setLocation({
+            lat: current.coords.latitude,
+            lng: current.coords.longitude,
+          });
+        }
+      } catch (error) {
+        console.warn('Location lookup failed. Nearby ranking will stay generic.', error);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const nearbyListingsQuery = useNearbyListings({
+    query: query.length >= 2 ? query : '',
+    category,
+    userLat: location?.lat,
+    userLng: location?.lng,
+    limit: 24,
+  });
+
+  const items = useMemo(() => {
+    const remoteItems = (nearbyListingsQuery.data ?? []).map(normalizeRemoteItem);
+    return mergeListings(remoteItems, localListings).filter((item) => {
+      const matchesCategory = category === 'All' || item.category === category;
+      const matchesQuery = query.length < 2 || item.title.toLowerCase().includes(query.toLowerCase());
+      return matchesCategory && matchesQuery;
+    });
+  }, [category, localListings, nearbyListingsQuery.data, query]);
 
   const { width } = useWindowDimensions();
   const numColumns = width > 600 ? 3 : 2;
   const featuredLabel = useMemo(() => `${items.length} premium items nearby`, [items.length]);
+  const isLoading = nearbyListingsQuery.isLoading && items.length === 0;
 
   return (
     <View style={styles.container}>
@@ -160,7 +184,7 @@ const HomeScreen = () => {
   );
 };
 
-function normalizeRemoteItem(item: Record<string, unknown>): FeedItem {
+function normalizeRemoteItem(item: PublishedListing): FeedItem {
   const price = Number(item.price ?? item.pricePerDay ?? 0);
   const deposit = Number(item.deposit ?? 0);
   const title = String(item.title ?? 'Untitled item');
@@ -176,7 +200,7 @@ function normalizeRemoteItem(item: Record<string, unknown>): FeedItem {
     deposit,
     image,
     owner,
-    distance: 'Near you',
+    distance: item.distance || 'Near you',
     locality,
     category,
     raw: {

@@ -5,9 +5,10 @@ import { AuthProvider } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useProtectedRoute } from '../src/hooks/useProtectedRoute';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider, useAppTheme } from '../src/theme/provider';
+import { activateAppCheck } from '../src/services/AppCheckService';
 
 // Export Expo Router Error Boundary to catch deep-link rendering crashes
 export { ErrorBoundary } from 'expo-router';
@@ -17,6 +18,10 @@ function RootLayoutNav() {
     // and forces a router.replace if the user shouldn't be here.
     useProtectedRoute();
     const { theme, mode } = useAppTheme();
+
+    useEffect(() => {
+        activateAppCheck();
+    }, []);
 
     return (
         <>

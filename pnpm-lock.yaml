@@ -117,6 +117,9 @@ importers:
       '@react-native-firebase/app':
         specifier: ^23.8.6
         version: 23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      '@react-native-firebase/app-check':
+        specifier: ^23.8.6
+        version: 23.8.6(@react-native-firebase/app@23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(expo@54.0.33)
       '@react-native-firebase/auth':
         specifier: ^23.8.6
         version: 23.8.6(@react-native-firebase/app@23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(expo@54.0.33)
@@ -1937,6 +1940,15 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '>=0.59'
+
+  '@react-native-firebase/app-check@23.8.6':
+    resolution: {integrity: sha512-aWZ0SRAXRHu0CQkJAgS57KgivTqecznAuFgNwANVSr8gdNUj6eeIjbtBjFX2Rs3S8cCoWeUZHHC1P5FvmG9XYQ==}
+    peerDependencies:
+      '@react-native-firebase/app': 23.8.6
+      expo: '>=47.0.0'
+    peerDependenciesMeta:
+      expo:
+        optional: true
 
   '@react-native-firebase/app@23.8.6':
     resolution: {integrity: sha512-oHM/0c5CbMSDLzIAjdQTH2im7Lr1AoajDYyehye9ge6zH/tuhCtwXtkf19zE0MyFsSqd06IoYRfZP7W05D4m+w==}
@@ -9332,6 +9344,12 @@ snapshots:
     dependencies:
       react: 19.2.4
       react-native: 0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)
+
+  '@react-native-firebase/app-check@23.8.6(@react-native-firebase/app@23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(expo@54.0.33)':
+    dependencies:
+      '@react-native-firebase/app': 23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+    optionalDependencies:
+      expo: 54.0.33(@babel/core@7.28.4)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
 
   '@react-native-firebase/app@23.8.6(@react-native-async-storage/async-storage@2.2.0(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4)))(expo@54.0.33)(react-native@0.84.0(@babel/core@7.28.4)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)':
     dependencies:

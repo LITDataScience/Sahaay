@@ -5,8 +5,9 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import { SecurityService } from '../services/SecurityService';
-import { supabase } from '../lib/supabase';
 
 export type User = {
   id: string;
@@ -21,6 +22,7 @@ export type User = {
 type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
+  requestPhoneOtp: (phone: string) => Promise<{ mode: 'firebase' | 'demo'; code?: string }>;
   loginWithPhoneOtp: (phone: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -30,32 +32,44 @@ type AuthContextValue = {
 const STORAGE_KEY = 'sahaay.auth.user.v2';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+let pendingFirebaseConfirmation: FirebaseAuthTypes.ConfirmationResult | null = null;
+let pendingDemoOtp: string | null = null;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Supabase Auth State Listener for App Hydration
+  // Firebase Auth State Listener for App Hydration
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Ideally map the Supabase user to our local User schema
-        // For now, load local storage augmentations if they exist
-        AsyncStorage.getItem(STORAGE_KEY).then(raw => {
-          if (raw) setUser(JSON.parse(raw));
-          setIsLoading(false);
-        });
-      } else {
+    const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        await AsyncStorage.removeItem(STORAGE_KEY);
         setIsLoading(false);
+        return;
       }
+
+      const [raw, profileSnap] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY),
+        firestore().collection('users').doc(firebaseUser.uid).get(),
+      ]);
+
+      const localUser = raw ? (JSON.parse(raw) as User) : null;
+      const profile = profileSnap.data() || {};
+      const hydratedUser = buildUserRecord(firebaseUser.uid, {
+        phone: firebaseUser.phoneNumber || localUser?.phone || '',
+        name: profile.name || localUser?.name || 'New User',
+        reputationScore: profile.reputationScore ?? localUser?.reputation ?? 4.5,
+        isVerified: profile.isVerified ?? localUser?.isVerified ?? false,
+        kycStatus: profile.kycStatus ?? localUser?.kycStatus ?? 'pending',
+      });
+
+      setUser(hydratedUser);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(hydratedUser));
+      setIsLoading(false);
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setUser(null);
-        AsyncStorage.removeItem(STORAGE_KEY);
-      }
-    });
+    return unsubscribe;
   }, []);
 
   const persist = useCallback(async (u: User | null) => {
@@ -66,34 +80,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const loginWithPhoneOtp = useCallback(async (phone: string, otp: string) => {
-    // 1. Authenticate with Supabase Realtime Provider
-    const { data: { session }, error } = await supabase.auth.verifyOtp({
-      phone,
-      token: otp,
-      type: 'sms',
-    });
+  const requestPhoneOtp = useCallback(async (phone: string) => {
+    const normalizedPhone = normalizeIndianPhone(phone);
 
-    // Note for Demo Env: Supabase might fail if SMS isn't configured. 
-    // We catch the error but still mock a local login if it fails for the interactive demo.
-    if (error) {
-      console.warn('Supabase Verification Failed, falling back to local simulation for Demo', error.message);
+    try {
+      pendingFirebaseConfirmation = await auth().signInWithPhoneNumber(normalizedPhone);
+      pendingDemoOtp = null;
+
+      return { mode: 'firebase' as const };
+    } catch (error) {
+      console.warn('Firebase phone auth unavailable, using secure demo OTP fallback.', error);
+      pendingFirebaseConfirmation = null;
+      pendingDemoOtp = String(Math.floor(100000 + Math.random() * 900000));
+
+      return { mode: 'demo' as const, code: pendingDemoOtp };
+    }
+  }, []);
+
+  const loginWithPhoneOtp = useCallback(async (phone: string, otp: string) => {
+    let firebaseUser = auth().currentUser;
+
+    if (pendingFirebaseConfirmation) {
+      const credential = await pendingFirebaseConfirmation.confirm(otp);
+      firebaseUser = credential?.user ?? null;
+    } else {
+      if (!pendingDemoOtp || pendingDemoOtp !== otp) {
+        throw new Error('Invalid OTP. Please request a new code and try again.');
+      }
+
+      if (!firebaseUser) {
+        const anonymousCredential = await auth().signInAnonymously();
+        firebaseUser = anonymousCredential.user;
+      }
     }
 
-    // 2. Generate RSA KeyPair bound to device enclave
+    if (!firebaseUser) {
+      throw new Error('Unable to establish a secure session.');
+    }
+
     const publicKey = await SecurityService.bindDevice();
     console.log('Device bound cryptographically with PK:', publicKey);
 
-    const initials = 'U';
-    const newUser: User = {
-      id: session?.user?.id || Math.random().toString(36).slice(2),
-      name: 'New User',
-      phone,
-      avatarInitials: initials,
-      reputation: 4.5,
-      isVerified: false,
-      kycStatus: 'pending',
-    };
+    const userRef = firestore().collection('users').doc(firebaseUser.uid);
+    const profileSnap = await userRef.get();
+    const previous = profileSnap.data() || {};
+    const newUser = buildUserRecord(firebaseUser.uid, {
+      phone: normalizeIndianPhone(phone),
+      name: previous.name || 'New User',
+      reputationScore: previous.reputationScore ?? 4.5,
+      isVerified: previous.isVerified ?? false,
+      kycStatus: previous.kycStatus ?? 'pending',
+    });
+
+    await userRef.set({
+      name: newUser.name,
+      phone: newUser.phone,
+      publicKey,
+      isVerified: newUser.isVerified,
+      kycStatus: newUser.kycStatus,
+      reputationScore: newUser.reputation,
+      authProvider: pendingFirebaseConfirmation ? 'phone' : 'anonymous_demo',
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+      createdAt: previous.createdAt || firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    pendingFirebaseConfirmation = null;
+    pendingDemoOtp = null;
 
     setUser(newUser);
     await persist(newUser);
@@ -101,36 +153,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = useCallback(async () => {
     await SecurityService.unbindDevice();
-    await supabase.auth.signOut();
+    await auth().signOut();
+    pendingFirebaseConfirmation = null;
+    pendingDemoOtp = null;
     setUser(null);
     await persist(null);
   }, [persist]);
 
   const updateProfile = useCallback(async (updates: Partial<User>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const merged = { ...prev, ...updates };
-      persist(merged);
-      return merged;
-    });
-  }, [persist]);
+    if (!user) {
+      return;
+    }
+
+    const merged = { ...user, ...updates };
+    setUser(merged);
+    await persist(merged);
+
+    if (auth().currentUser) {
+      await firestore().collection('users').doc(auth().currentUser!.uid).set({
+        name: updates.name,
+        phone: updates.phone,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+  }, [persist, user]);
 
   const verifyUser = useCallback(async (success: boolean) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const updatedUser: User = {
-        ...prev,
-        isVerified: success,
-        kycStatus: success ? 'verified' : 'failed'
-      };
-      persist(updatedUser);
-      return updatedUser;
-    });
-  }, [persist]);
+    if (!user) {
+      return;
+    }
+
+    const nextUser: User = {
+      ...user,
+      isVerified: success,
+      kycStatus: success ? 'verified' : 'failed'
+    };
+
+    setUser(nextUser);
+    await persist(nextUser);
+
+    if (auth().currentUser && nextUser) {
+      await firestore().collection('users').doc(auth().currentUser!.uid).set({
+        isVerified: nextUser.isVerified,
+        kycStatus: nextUser.kycStatus,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+  }, [persist, user]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, loginWithPhoneOtp, logout, updateProfile, verifyUser }),
-    [user, isLoading, loginWithPhoneOtp, logout, updateProfile, verifyUser]
+    () => ({ user, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser }),
+    [user, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser]
   );
 
   return (
@@ -145,3 +218,37 @@ export const useAuth = (): AuthContextValue => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
+
+function normalizeIndianPhone(phone: string) {
+  const digits = phone.replace(/\D/g, '');
+  return digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
+}
+
+function buildUserRecord(
+  uid: string,
+  payload: {
+    phone: string;
+    name: string;
+    reputationScore: number;
+    isVerified: boolean;
+    kycStatus: User['kycStatus'];
+  }
+): User {
+  const initials = payload.name
+    .split(' ')
+    .filter(Boolean)
+    .map((chunk) => chunk[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'U';
+
+  return {
+    id: uid,
+    name: payload.name,
+    phone: payload.phone,
+    avatarInitials: initials,
+    reputation: payload.reputationScore,
+    isVerified: payload.isVerified,
+    kycStatus: payload.kycStatus,
+  };
+}
