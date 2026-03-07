@@ -8,4 +8,4 @@
 
 > `const` **onItemWrite**: `CloudFunction`\<`FirestoreEvent`\<`Change`\<`DocumentSnapshot`\> \| `undefined`, \{ `itemId`: `string`; \}\>\>
 
-Defined in: [index.ts:32](https://github.com/LITDataScience/Sahaay/blob/5376363710266e1f4ea5f6dd258cd41bf02da795/firebase/functions/src/index.ts#L32)
+Defined in: [index.ts:32](https://github.com/LITDataScience/Sahaay/blob/c4d787303ba5910395976a0179279ce00aa1608e/firebase/functions/src/index.ts#L32)
