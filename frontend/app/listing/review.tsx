@@ -7,10 +7,11 @@ import { useAppTheme } from '../../src/theme/provider';
 import { useListingDraftStore } from '../../src/features/listings/store/useListingDraftStore';
 import { saveLocalPublishedListing } from '../../src/features/listings/storage';
 import { createListingRemote } from '../../src/entities/listing/api';
+import { Routes } from '../../src/types/navigation';
 
 export default function ListingReviewScreen() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { identityGate, logout } = useAuth();
     const { theme } = useAppTheme();
     const styles = createStyles(theme);
     const draft = useListingDraftStore();
@@ -25,37 +26,40 @@ export default function ListingReviewScreen() {
     }, [draft.deposit, draft.pricePerDay]);
 
     const publishListing = async () => {
+        if (!identityGate.canUsePayoutFlows) {
+            if (identityGate.isAnonymousSession) {
+                Alert.alert(
+                    'Secure phone sign-in required',
+                    identityGate.reason || 'Demo sessions cannot publish listings.',
+                    [
+                        { text: 'Not now', style: 'cancel' },
+                        {
+                            text: 'Sign out and continue',
+                            onPress: async () => {
+                                await logout();
+                                router.replace(Routes.Auth.Login);
+                            },
+                        },
+                    ]
+                );
+                return;
+            }
+
+            Alert.alert(
+                'KYC required',
+                identityGate.reason || 'Complete KYC verification before publishing listings.',
+                [
+                    { text: 'Later', style: 'cancel' },
+                    { text: 'Verify now', onPress: () => router.push(Routes.Auth.Verification) },
+                ]
+            );
+            return;
+        }
+
         if (!draft.location) {
             Alert.alert('Location missing', 'Add a valid listing location before publishing.');
             return;
         }
-
-        const baseListing = {
-            title: draft.title.trim(),
-            description: draft.description.trim(),
-            category: draft.category,
-            condition: draft.condition,
-            image: draft.images[0],
-            images: draft.images,
-            price: economics.pricePerDay,
-            pricePerDay: economics.pricePerDay,
-            deposit: economics.deposit,
-            radiusKm: draft.radiusKm,
-            owner: user?.name || 'You',
-            ownerId: user?.id || 'local-user',
-            distance: `${draft.radiusKm} km visibility`,
-            locality: draft.location.locality,
-            city: draft.location.city,
-            state: draft.location.state,
-            payoutMethod: draft.payoutMethod,
-            status: 'active' as const,
-        };
-
-        let publishedListing = {
-            id: `local_${Date.now()}`,
-            ...baseListing,
-            createdAt: Date.now(),
-        };
 
         try {
             const remoteItem = await createListingRemote({
@@ -71,20 +75,18 @@ export default function ListingReviewScreen() {
                 location: draft.location,
             });
 
-            publishedListing = {
-                ...publishedListing,
-                ...remoteItem,
-                id: remoteItem.id,
-            };
+            await saveLocalPublishedListing(remoteItem);
+            draft.reset();
+
+            Alert.alert('Listing published', 'Your verified listing is now ready to appear in nearby discovery.');
+            router.replace('/(tabs)' as never);
         } catch (error) {
-            console.warn('Remote listing publish failed, preserving premium local-first publish.', error);
+            console.warn('Secure listing publish failed.', error);
+            Alert.alert(
+                'Secure publish unavailable',
+                'We could not verify this listing against the backend right now. Your draft is still here, but it will not go live until the secure publish succeeds.'
+            );
         }
-
-        await saveLocalPublishedListing(publishedListing);
-        draft.reset();
-
-        Alert.alert('Listing published', 'Your item is now ready to appear in nearby discovery.');
-        router.replace('/(tabs)' as never);
     };
 
     return (
@@ -138,8 +140,13 @@ export default function ListingReviewScreen() {
                 </View>
             </View>
 
-            <TouchableOpacity style={styles.cta} onPress={publishListing}>
-                <Text style={styles.ctaText}>Publish premium listing</Text>
+            <TouchableOpacity
+                style={[styles.cta, !identityGate.canUsePayoutFlows && styles.ctaDisabled]}
+                onPress={publishListing}
+            >
+                <Text style={styles.ctaText}>
+                    {identityGate.canUsePayoutFlows ? 'Publish premium listing' : 'Verification required to publish'}
+                </Text>
             </TouchableOpacity>
         </ScrollView>
     );
@@ -244,6 +251,9 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) =>
             alignItems: 'center',
             justifyContent: 'center',
             ...theme.shadows.medium,
+        },
+        ctaDisabled: {
+            opacity: 0.75,
         },
         ctaText: {
             color: '#181411',

@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { createMachine, createActor } from 'xstate';
 import { BookingRequest } from '../schemas/booking';
 import { AMLGraphService } from './AMLGraphService';
+import { TrustService } from './TrustService';
 
 // Define the deterministic Escrow State Machine
 export const EscrowMachine = createMachine({
@@ -47,12 +48,14 @@ export const EscrowMachine = createMachine({
 
 export class BookingService {
     private readonly db = admin.firestore();
+    private readonly trustService = new TrustService();
 
     /**
      * Creates a new booking using XState determinism and an Idempotency Key
      * to prevent double-billing on network retries.
      */
     async createItemBooking(data: BookingRequest & { idempotencyKey?: string }, borrowerId: string) {
+        await this.trustService.assertPayoutEligibleUser(borrowerId);
         const itemRef = this.db.collection('items').doc(data.itemId);
         const idempotencyKey = data.idempotencyKey || `bk_ik_${borrowerId}_${data.itemId}_${Date.now()}`;
 

@@ -19,8 +19,16 @@ export type User = {
   kycStatus: 'pending' | 'verified' | 'failed';
 };
 
+export type IdentityGate = {
+  canUsePayoutFlows: boolean;
+  isAnonymousSession: boolean;
+  requiresKyc: boolean;
+  reason: string | null;
+};
+
 type AuthContextValue = {
   user: User | null;
+  identityGate: IdentityGate;
   isLoading: boolean;
   requestPhoneOtp: (phone: string) => Promise<{ mode: 'firebase' | 'demo'; code?: string }>;
   loginWithPhoneOtp: (phone: string, otp: string) => Promise<void>;
@@ -37,6 +45,12 @@ let pendingDemoOtp: string | null = null;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [identityGate, setIdentityGate] = useState<IdentityGate>({
+    canUsePayoutFlows: false,
+    isAnonymousSession: false,
+    requiresKyc: true,
+    reason: 'Complete secure phone sign-in before using listings or bookings.',
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // Firebase Auth State Listener for App Hydration
@@ -44,6 +58,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
       if (!firebaseUser) {
         setUser(null);
+        setIdentityGate({
+          canUsePayoutFlows: false,
+          isAnonymousSession: false,
+          requiresKyc: true,
+          reason: 'Complete secure phone sign-in before using listings or bookings.',
+        });
         await AsyncStorage.removeItem(STORAGE_KEY);
         setIsLoading(false);
         return;
@@ -65,6 +85,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       setUser(hydratedUser);
+      setIdentityGate(buildIdentityGate(firebaseUser.isAnonymous, hydratedUser));
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(hydratedUser));
       setIsLoading(false);
     });
@@ -148,6 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     pendingDemoOtp = null;
 
     setUser(newUser);
+    setIdentityGate(buildIdentityGate(firebaseUser.isAnonymous, newUser));
     await persist(newUser);
   }, [persist]);
 
@@ -157,6 +179,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     pendingFirebaseConfirmation = null;
     pendingDemoOtp = null;
     setUser(null);
+    setIdentityGate({
+      canUsePayoutFlows: false,
+      isAnonymousSession: false,
+      requiresKyc: true,
+      reason: 'Complete secure phone sign-in before using listings or bookings.',
+    });
     await persist(null);
   }, [persist]);
 
@@ -167,6 +195,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const merged = { ...user, ...updates };
     setUser(merged);
+    setIdentityGate(buildIdentityGate(auth().currentUser?.isAnonymous === true, merged));
     await persist(merged);
 
     if (auth().currentUser) {
@@ -179,6 +208,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [persist, user]);
 
   const verifyUser = useCallback(async (success: boolean) => {
+    if (success) {
+      throw new Error('Live KYC approval must be issued by the backend review pipeline. This client flow cannot self-verify a payout account yet.');
+    }
+
     if (!user) {
       return;
     }
@@ -190,6 +223,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     setUser(nextUser);
+    setIdentityGate(buildIdentityGate(auth().currentUser?.isAnonymous === true, nextUser));
     await persist(nextUser);
 
     if (auth().currentUser && nextUser) {
@@ -202,8 +236,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [persist, user]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser }),
-    [user, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser]
+    () => ({ user, identityGate, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser }),
+    [user, identityGate, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser]
   );
 
   return (
@@ -250,5 +284,32 @@ function buildUserRecord(
     reputation: payload.reputationScore,
     isVerified: payload.isVerified,
     kycStatus: payload.kycStatus,
+  };
+}
+
+function buildIdentityGate(isAnonymousSession: boolean, user: User | null): IdentityGate {
+  if (isAnonymousSession) {
+    return {
+      canUsePayoutFlows: false,
+      isAnonymousSession: true,
+      requiresKyc: true,
+      reason: 'Secure phone sign-in is required before publishing listings or booking items.',
+    };
+  }
+
+  if (!user || user.isVerified !== true || user.kycStatus !== 'verified') {
+    return {
+      canUsePayoutFlows: false,
+      isAnonymousSession: false,
+      requiresKyc: true,
+      reason: 'Complete KYC verification before publishing listings or booking items.',
+    };
+  }
+
+  return {
+    canUsePayoutFlows: true,
+    isAnonymousSession: false,
+    requiresKyc: false,
+    reason: null,
   };
 }

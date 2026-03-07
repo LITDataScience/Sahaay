@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { CreateListingInput, SearchListingsInput } from '../schemas/listing';
+import { TrustService } from './TrustService';
 
 type SearchResult = {
     id: string;
@@ -26,12 +27,11 @@ type SearchResult = {
 
 export class ListingService {
     private readonly db = admin.firestore();
+    private readonly trustService = new TrustService();
 
     async createItemListing(input: CreateListingInput, ownerId: string) {
+        const userData = await this.trustService.assertPayoutEligibleUser(ownerId);
         const itemRef = this.db.collection('items').doc();
-        const userRef = this.db.collection('users').doc(ownerId);
-        const userSnap = await userRef.get();
-        const userData = userSnap.data();
 
         const platformFeePct = 10;
         const lenderPayoutPct = 90;

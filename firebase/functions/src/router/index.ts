@@ -6,6 +6,7 @@ import { z } from 'zod';
 import * as admin from 'firebase-admin';
 import { ListingService } from '../services/ListingService';
 import { CreateListingSchema, SearchListingsSchema } from '../schemas/listing';
+import { TrustService, TrustedUserProfile } from '../services/TrustService';
 
 // Context interface bridging Firebase Auth into tRPC
 export interface Context {
@@ -14,6 +15,7 @@ export interface Context {
         token: any;
     };
     app?: any; // AppCheck token
+    trustedUser?: TrustedUserProfile;
 }
 
 // 1. Initialize tRPC
@@ -35,8 +37,33 @@ const requireAppCheck = t.middleware(({ ctx, next }) => {
     return next();
 });
 
+const requireTrustedPayoutIdentity = t.middleware(async ({ ctx, next }) => {
+    if (!ctx.auth) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User must be authenticated.' });
+    }
+
+    const signInProvider = ctx.auth.token?.firebase?.sign_in_provider;
+    if (signInProvider === 'anonymous') {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Complete secure phone sign-in before publishing listings or booking items.',
+        });
+    }
+
+    try {
+        const trustedUser = await new TrustService().assertPayoutEligibleUser(ctx.auth.uid);
+        return next({ ctx: { ...ctx, trustedUser } });
+    } catch (error) {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: error instanceof Error ? error.message : 'Trusted identity required for payout flows.',
+        });
+    }
+});
+
 // Guard procedure combining auth and app check
 const guardedProcedure = t.procedure.use(requireAppCheck).use(requireAuth);
+const trustedPayoutProcedure = guardedProcedure.use(requireTrustedPayoutIdentity);
 const appCheckedProcedure = t.procedure.use(requireAppCheck);
 
 // 3. Define the Router
@@ -46,7 +73,7 @@ export const appRouter = t.router({
         return 'Sahaay Engine is alive 🚀';
     }),
 
-    createItem: guardedProcedure
+    createItem: trustedPayoutProcedure
         .input(CreateListingSchema)
         .mutation(async ({ input, ctx }) => {
             try {
@@ -54,6 +81,9 @@ export const appRouter = t.router({
                 const result = await listingService.createItemListing(input, ctx.auth.uid);
                 return { success: true, item: result };
             } catch (error: any) {
+                if (error instanceof TRPCError) {
+                    throw error;
+                }
                 console.error('tRPC Create Listing Error:', error);
                 throw new TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
@@ -92,7 +122,7 @@ export const appRouter = t.router({
         }),
 
     // Booking Endpoint enforcing XState and Idempotency
-    initiateBooking: guardedProcedure
+    initiateBooking: trustedPayoutProcedure
         .input(BookingRequestSchema)
         .mutation(async ({ input, ctx }) => {
             try {
@@ -104,6 +134,9 @@ export const appRouter = t.router({
 
                 return { success: true, bookingId: result.bookingId, status: result.status };
             } catch (error: any) {
+                if (error instanceof TRPCError) {
+                    throw error;
+                }
                 console.error('tRPC Booking Error:', error);
                 throw new TRPCError({
                     code: 'INTERNAL_SERVER_ERROR',
