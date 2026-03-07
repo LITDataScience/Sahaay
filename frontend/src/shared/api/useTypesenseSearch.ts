@@ -15,9 +15,14 @@ const typesenseClient = new Client({
     connectionTimeoutSeconds: 2,
 });
 
-export const useTypesenseSearch = (query: string, category: string) => {
+type NearbySearchOptions = {
+    userLat?: number;
+    userLng?: number;
+};
+
+export const useTypesenseSearch = (query: string, category: string, options: NearbySearchOptions = {}) => {
     return useQuery({
-        queryKey: ['itemsSearch', query, category],
+        queryKey: ['itemsSearch', query, category, options.userLat, options.userLng],
         queryFn: async () => {
             // For an empty search, Typesense allows querying with `q='*'` to return everything.
             let q = query.trim() === '' ? '*' : query;
@@ -32,7 +37,7 @@ export const useTypesenseSearch = (query: string, category: string) => {
             try {
                 const searchParameters: any = {
                     q,
-                    query_by: 'title,description',
+                    query_by: 'title,description,category,locality,city',
                     // prefix=true enables instant search as the user types (e.g. "Dr" matches "Drill")
                     prefix: true,
                 };
@@ -41,11 +46,21 @@ export const useTypesenseSearch = (query: string, category: string) => {
                     searchParameters.filter_by = filterString;
                 }
 
+                if (typeof options.userLat === 'number' && typeof options.userLng === 'number') {
+                    searchParameters.sort_by = `_geoPoint(${options.userLat}, ${options.userLng}):asc`;
+                }
+
                 // Typesense promises sub-10ms response times
                 const response = await typesenseClient.collections('items').documents().search(searchParameters);
 
                 // Map the Typesense payload into our FSD Item model
-                return response.hits?.map((hit: any) => hit.document as Item) || [];
+                return (
+                    response.hits?.map((hit: any) => ({
+                        ...(hit.document as Item),
+                        locality: hit.document.locality,
+                        distance: hit.document.distance || 'Nearby',
+                    })) || []
+                );
             } catch (error) {
                 console.error("Typesense Query Error:", error);
                 // Fail gracefully, return empty results

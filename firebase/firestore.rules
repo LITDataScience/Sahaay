@@ -15,26 +15,28 @@ service cloud.firestore {
       
       // Updates must not tamper with internal KYC or reputation scores
       allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reputation', 'isVerified', 'kycStatus']);
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reputation', 'reputationScore', 'isVerified', 'kycStatus', 'beneficiaryId']);
                     
       // Only backend admin SDK can create new verified users via Auth triggers
       allow create: if false;
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // --- Listings Collection ---
-    // Anyone authenticated can read active listings (typesense replication reads all anyway)
-    match /listings/{listingId} {
+    // --- Items Collection ---
+    // Anyone authenticated can read active items.
+    match /items/{itemId} {
       allow read: if request.auth != null;
       
-      // Creation requires a verifed KYC status
+      // Creation requires a verified KYC status and strict ownership binding.
       allow create: if request.auth != null 
                     && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isVerified == true
-                    && request.resource.data.lenderId == request.auth.uid;
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.radiusKm is number
+                    && request.resource.data.location is latlng;
       
-      // Only the lender can update/delete their own listing
+      // Only the owner can update/delete their own item.
       allow update, delete: if request.auth != null 
-                            && resource.data.lenderId == request.auth.uid;
+                            && resource.data.ownerId == request.auth.uid;
     }
 
     // --- Bookings (Escrow) Collection ---

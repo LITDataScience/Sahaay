@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Search } from 'lucide-react-native';
-import Colors from '../../constants/Colors';
-import Theme from '../../constants/Theme';
+import { useAppTheme } from '../../theme/provider';
 
 type Props = {
 	placeholder?: string;
@@ -12,19 +11,23 @@ type Props = {
 
 const SearchBar: React.FC<Props> = ({ placeholder = 'Search items, categories, users…', value, onChangeText }) => {
 	const [internal, setInternal] = useState('');
+    const { theme } = useAppTheme();
 	const text = value !== undefined ? value : internal;
 	const setText = (t: string) => {
 		setInternal(t);
 		onChangeText?.(t);
 	};
+
+    const styles = createStyles(theme);
+
 	return (
 		<View style={styles.container}>
-			<Search size={20} color={Colors.text.placeholder} style={styles.icon} />
+			<Search size={20} color={theme.colors.textMuted} style={styles.icon} />
 			<TextInput
 				value={text}
 				style={styles.input}
 				placeholder={placeholder}
-				placeholderTextColor={Colors.text.placeholder}
+				placeholderTextColor={theme.colors.textMuted}
 				returnKeyType="search"
 				onChangeText={setText}
 			/>
@@ -32,17 +35,17 @@ const SearchBar: React.FC<Props> = ({ placeholder = 'Search items, categories, u
 	);
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSheet.create({
 	container: {
-		backgroundColor: Colors.surface,
-		borderRadius: Theme.borderRadius.full, // Pill shape
-		paddingHorizontal: Theme.spacing.md,
-		paddingVertical: 12, // Slightly taller
+		backgroundColor: theme.colors.surfaceElevated,
+		borderRadius: theme.radius.pill,
+		paddingHorizontal: theme.spacing.md,
+		paddingVertical: 14,
 		flexDirection: 'row',
 		alignItems: 'center',
-		...Theme.shadows.small,
+		...theme.shadows.soft,
 		borderWidth: 1,
-		borderColor: Colors.border,
+		borderColor: theme.colors.border,
 	},
 	icon: {
 		marginRight: 10,
@@ -50,7 +53,7 @@ const styles = StyleSheet.create({
 	input: {
 		flex: 1,
 		fontSize: 16,
-		color: Colors.text.primary,
+		color: theme.colors.textPrimary,
 	},
 });
 
