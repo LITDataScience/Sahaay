@@ -24,7 +24,11 @@ export const onUserCreate = beforeUserCreated(async (event) => {
         email: user.email,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         role: "user", // Default role
-        reputationScore: 0
+        reputationScore: 0,
+        isVerified: false,
+        kycStatus: 'pending',
+        verificationStatus: 'not_started',
+        verificationReviewNote: '',
     }, { merge: true });
 });
 
@@ -43,11 +47,29 @@ export const onItemCreated = onDocumentCreated('items/{itemId}', async (event) =
     if (!snap) return;
     const itemData = snap.data();
     try {
-        const isSafe = await AIService.moderateListing(itemData);
-        if (!isSafe) {
+        const moderation = await AIService.moderateListing(itemData);
+        if (!moderation.safe) {
             // Flag for admin intervention and soft-hide the listing
-            await snap.ref.update({ status: 'flagged_by_ai' });
+            await snap.ref.update({
+                status: 'flagged_by_ai',
+                moderation: {
+                    status: 'flagged',
+                    labels: moderation.labels,
+                    score: moderation.score,
+                    summary: moderation.summary,
+                },
+            });
+            return;
         }
+
+        await snap.ref.set({
+            moderation: {
+                status: 'approved',
+                labels: moderation.labels,
+                score: moderation.score,
+                summary: moderation.summary,
+            },
+        }, { merge: true });
     } catch (e) {
         console.error("AI Moderation Error:", e);
     }

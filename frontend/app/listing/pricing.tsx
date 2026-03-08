@@ -4,15 +4,27 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, Wallet } from 'lucide-react-native';
 import { useAppTheme } from '../../src/theme/provider';
 import { useListingDraftStore } from '../../src/features/listings/store/useListingDraftStore';
+import { useAnalyzeListingDraft } from '../../src/entities/listing/api';
 
 export default function ListingPricingScreen() {
     const router = useRouter();
     const { theme } = useAppTheme();
     const styles = createStyles(theme);
     const draft = useListingDraftStore();
-
     const pricePerDay = Number(draft.pricePerDay || 0);
     const deposit = Number(draft.deposit || 0);
+    const analysisQuery = useAnalyzeListingDraft({
+        title: draft.title,
+        description: draft.description,
+        category: draft.category,
+        condition: draft.condition,
+        pricePerDay,
+        deposit,
+        radiusKm: draft.radiusKm,
+        payoutMethod: draft.payoutMethod,
+        location: draft.location || undefined,
+        images: draft.images,
+    }, Boolean(draft.title || pricePerDay || deposit));
 
     const economics = useMemo(() => {
         const platformFee = Math.round(pricePerDay * 0.1);
@@ -108,6 +120,18 @@ export default function ListingPricingScreen() {
                     <Text style={styles.moneyLabel}>Refundable deposit</Text>
                     <Text style={styles.moneyValue}>₹{economics.deposit}</Text>
                 </View>
+                {analysisQuery.data && (
+                    <>
+                        <View style={styles.moneyRow}>
+                            <Text style={styles.moneyLabel}>AI suggested price</Text>
+                            <Text style={styles.moneyValue}>₹{analysisQuery.data.suggestedPricePerDay ?? pricePerDay}</Text>
+                        </View>
+                        <View style={styles.moneyRow}>
+                            <Text style={styles.moneyLabel}>AI suggested deposit</Text>
+                            <Text style={styles.moneyValue}>₹{analysisQuery.data.suggestedDeposit ?? deposit}</Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             <TouchableOpacity style={styles.cta} onPress={goNext}>

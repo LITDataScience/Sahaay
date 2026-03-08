@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { CreateListingInput, SearchListingsInput } from '../schemas/listing';
+import { SearchService } from './SearchService';
 import { TrustService } from './TrustService';
 
 type SearchResult = {
@@ -28,6 +29,7 @@ type SearchResult = {
 export class ListingService {
     private readonly db = admin.firestore();
     private readonly trustService = new TrustService();
+    private readonly searchService = new SearchService();
 
     async createItemListing(input: CreateListingInput, ownerId: string) {
         const userData = await this.trustService.assertPayoutEligibleUser(ownerId);
@@ -73,6 +75,14 @@ export class ListingService {
                 beneficiaryId: userData?.beneficiaryId || null,
                 settlementPreference: 'instant',
             },
+            verificationLevel: userData?.isVerified ? 'verified' : 'pending',
+            trustScore: userData?.isVerified ? 0.92 : 0.45,
+            moderation: {
+                status: 'pending',
+                labels: [],
+                score: 0,
+                summary: 'Awaiting AI review.',
+            },
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
@@ -88,66 +98,62 @@ export class ListingService {
     }
 
     async searchItemsNearby(input: SearchListingsInput): Promise<SearchResult[]> {
-        const snapshot = await this.db
-            .collection('items')
-            .where('status', '==', 'active')
-            .orderBy('createdAt', 'desc')
-            .limit(100)
-            .get();
+        return await this.searchService.searchNearbyListings(input) as unknown as SearchResult[];
+    }
 
-        const query = input.query.trim().toLowerCase();
+    async getItemById(itemId: string, userLocation?: { userLat?: number; userLng?: number }) {
+        const itemSnap = await this.db.collection('items').doc(itemId).get();
+        if (!itemSnap.exists) {
+            throw new Error('Listing not found.');
+        }
 
-        return snapshot.docs
-            .map((doc) => {
-                const data = doc.data();
-                const point = data.location as admin.firestore.GeoPoint | undefined;
-                const distanceKm =
-                    point && typeof input.userLat === 'number' && typeof input.userLng === 'number'
-                        ? haversineKm(input.userLat, input.userLng, point.latitude, point.longitude)
-                        : null;
+        const data = itemSnap.data() || {};
+        const point = data.location as admin.firestore.GeoPoint | undefined;
+        const distanceKm =
+            point && typeof userLocation?.userLat === 'number' && typeof userLocation?.userLng === 'number'
+                ? haversineKm(userLocation.userLat, userLocation.userLng, point.latitude, point.longitude)
+                : null;
 
-                return {
-                    id: doc.id,
-                    title: data.title,
-                    description: data.description,
-                    category: data.category,
-                    condition: data.condition,
-                    image: data.image,
-                    images: data.images || [],
-                    price: data.pricePerDay ?? data.price ?? 0,
-                    pricePerDay: data.pricePerDay ?? data.price ?? 0,
-                    deposit: data.deposit ?? 0,
-                    radiusKm: data.radiusKm ?? data.visibility?.radiusKm ?? 0,
-                    owner: data.ownerName || 'Trusted lender',
-                    ownerId: data.ownerId,
-                    distance: distanceKm !== null ? `${distanceKm.toFixed(1)} km` : 'Nearby',
-                    locality: data.locality || '',
-                    city: data.city || '',
-                    state: data.state || '',
-                    payoutMethod: data.payoutConfig?.payoutMethod || 'upi',
-                    status: data.status,
-                    createdAt: data.createdAt?.toMillis?.() || Date.now(),
-                    _distanceKm: distanceKm,
-                };
-            })
-            .filter((item) => {
-                const matchesCategory = input.category === 'All' || item.category === input.category;
-                const matchesQuery =
-                    query.length === 0 ||
-                    item.title.toLowerCase().includes(query) ||
-                    item.description.toLowerCase().includes(query);
-                const withinRadius =
-                    item._distanceKm === null || item._distanceKm <= (item.radiusKm || Number.MAX_SAFE_INTEGER);
+        const similarItems = await this.searchService.searchNearbyListings({
+            query: data.category || data.title || '',
+            category: data.category || 'All',
+            sortIntent: 'balanced',
+            trustPreference: 'balanced',
+            userLat: userLocation?.userLat,
+            userLng: userLocation?.userLng,
+            limit: 6,
+        });
 
-                return matchesCategory && matchesQuery && withinRadius;
-            })
-            .sort((a, b) => {
-                const leftDistance = a._distanceKm ?? Number.MAX_SAFE_INTEGER;
-                const rightDistance = b._distanceKm ?? Number.MAX_SAFE_INTEGER;
-                return leftDistance - rightDistance;
-            })
-            .slice(0, input.limit)
-            .map(({ _distanceKm, ...item }) => item);
+        return {
+            id: itemSnap.id,
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            condition: data.condition,
+            image: data.image,
+            images: data.images || [],
+            price: data.pricePerDay ?? data.price ?? 0,
+            pricePerDay: data.pricePerDay ?? data.price ?? 0,
+            deposit: data.deposit ?? 0,
+            radiusKm: data.radiusKm ?? data.visibility?.radiusKm ?? 0,
+            owner: data.ownerName || 'Trusted lender',
+            ownerId: data.ownerId,
+            locality: data.locality || '',
+            city: data.city || '',
+            state: data.state || '',
+            payoutMethod: data.payoutConfig?.payoutMethod || 'upi',
+            status: data.status || 'active',
+            createdAt: data.createdAt?.toMillis?.() || Date.now(),
+            distance: distanceKm !== null ? `${distanceKm.toFixed(1)} km` : 'Nearby',
+            trustScore: Number(data.trustScore ?? 0.45),
+            verificationLevel: data.verificationLevel || (data.payoutConfig?.payoutEligible ? 'verified' : 'pending'),
+            matchReasons: [
+                data.payoutConfig?.payoutEligible ? 'Trusted verified owner' : 'Identity review in progress',
+                distanceKm !== null && distanceKm <= 3 ? 'Fast nearby pickup' : 'Local discovery match',
+            ],
+            aiSummary: data.moderation?.summary || 'This listing is active in nearby discovery.',
+            similarItems: similarItems.filter((item) => item.id !== itemId).slice(0, 3),
+        };
     }
 }
 

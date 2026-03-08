@@ -43,6 +43,14 @@ export type PublishedListing = {
     payoutMethod: ListingPayoutMethod;
     createdAt: number;
     status: 'active';
+    verificationLevel?: 'verified' | 'pending';
+    trustScore?: number;
+    valueScore?: number;
+    rankScore?: number;
+    semanticScore?: number;
+    matchReasons?: string[];
+    aiSummary?: string;
+    similarItems?: PublishedListing[];
 };
 
 export const LISTING_CATEGORIES = [

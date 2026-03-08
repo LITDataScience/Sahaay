@@ -4,7 +4,7 @@
 // SPDX-Header-End
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, ScrollView } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
@@ -17,6 +17,7 @@ import { useAppTheme } from '../../src/theme/provider';
 import { getLocalPublishedListings } from '../../src/features/listings/storage';
 import { PublishedListing } from '../../src/features/listings/types';
 import { useNearbyListings } from '../../src/entities/listing/api';
+import { trackMarketplaceEvent } from '../../src/services/analytics';
 import { Routes } from '../../src/types/navigation';
 
 const AnyFlashList = FlashList as any;
@@ -33,6 +34,9 @@ type FeedItem = {
   distance: string;
   locality?: string;
   category?: string;
+  verificationLevel?: 'verified' | 'pending';
+  matchReasons?: string[];
+  trustScore?: number;
   raw: Record<string, unknown>;
 };
 
@@ -42,6 +46,8 @@ const HomeScreen = () => {
   const styles = createStyles(theme);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
+  const [budgetMax, setBudgetMax] = useState<number | undefined>();
+  const [depositMax, setDepositMax] = useState<number | undefined>();
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [localListings, setLocalListings] = useState<FeedItem[]>([]);
 
@@ -92,6 +98,9 @@ const HomeScreen = () => {
   const nearbyListingsQuery = useNearbyListings({
     query: query.length >= 2 ? query : '',
     category,
+    budgetMax,
+    depositMax,
+    naturalLanguageIntent: query,
     userLat: location?.lat,
     userLng: location?.lng,
     limit: 24,
@@ -99,16 +108,34 @@ const HomeScreen = () => {
 
   const items = useMemo(() => {
     const remoteItems = (nearbyListingsQuery.data ?? []).map(normalizeRemoteItem);
-    return mergeListings(remoteItems, localListings).filter((item) => {
+    const filteredLocal = localListings.filter((item) => {
       const matchesCategory = category === 'All' || item.category === category;
       const matchesQuery = query.length < 2 || item.title.toLowerCase().includes(query.toLowerCase());
-      return matchesCategory && matchesQuery;
+      const matchesBudget = !budgetMax || item.price <= budgetMax;
+      const matchesDeposit = !depositMax || item.deposit <= depositMax;
+      return matchesCategory && matchesQuery && matchesBudget && matchesDeposit;
     });
-  }, [category, localListings, nearbyListingsQuery.data, query]);
+    return mergeListings(remoteItems, filteredLocal);
+  }, [budgetMax, category, depositMax, localListings, nearbyListingsQuery.data, query]);
+
+  useEffect(() => {
+    if (!nearbyListingsQuery.data) return;
+    trackMarketplaceEvent({
+      name: 'search_submitted',
+      entityType: 'search',
+      metadata: {
+        query,
+        category,
+        budgetMax: budgetMax ?? null,
+        depositMax: depositMax ?? null,
+        resultCount: nearbyListingsQuery.data.length,
+      },
+    });
+  }, [budgetMax, category, depositMax, nearbyListingsQuery.data, query]);
 
   const { width } = useWindowDimensions();
   const numColumns = width > 600 ? 3 : 2;
-  const featuredLabel = useMemo(() => `${items.length} premium items nearby`, [items.length]);
+  const featuredLabel = useMemo(() => `${items.length} AI-ranked items nearby`, [items.length]);
   const isLoading = nearbyListingsQuery.isLoading && items.length === 0;
 
   return (
@@ -140,11 +167,42 @@ const HomeScreen = () => {
 
       <View style={styles.content}>
         <View style={styles.filterSection}>
-          <CategoryChips
-            categories={categoriesData}
-            selected={category}
-            onSelect={setCategory}
-          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            <CategoryChips
+              categories={categoriesData}
+              selected={category}
+              onSelect={setCategory}
+            />
+            {[
+              { label: 'Any budget', value: undefined },
+              { label: 'Under ₹500', value: 500 },
+              { label: 'Under ₹1000', value: 1000 },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.label}
+                style={[styles.quickChip, budgetMax === option.value && styles.quickChipActive]}
+                onPress={() => setBudgetMax(option.value)}
+              >
+                <Text style={[styles.quickChipText, budgetMax === option.value && styles.quickChipTextActive]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {[
+              { label: 'Any deposit', value: undefined },
+              { label: 'Deposit < ₹3000', value: 3000 },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.label}
+                style={[styles.quickChip, depositMax === option.value && styles.quickChipActive]}
+                onPress={() => setDepositMax(option.value)}
+              >
+                <Text style={[styles.quickChipText, depositMax === option.value && styles.quickChipTextActive]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <TouchableOpacity style={styles.filterBtn}>
             <SlidersHorizontal color={theme.colors.textPrimary} size={20} />
           </TouchableOpacity>
@@ -203,6 +261,9 @@ function normalizeRemoteItem(item: PublishedListing): FeedItem {
     distance: item.distance || 'Near you',
     locality,
     category,
+    verificationLevel: item.verificationLevel,
+    matchReasons: item.matchReasons,
+    trustScore: item.trustScore,
     raw: {
       ...item,
       price,
@@ -225,6 +286,9 @@ function normalizeLocalListing(item: PublishedListing): FeedItem {
     distance: item.distance,
     locality: item.locality,
     category: item.category,
+    verificationLevel: item.verificationLevel,
+    matchReasons: item.matchReasons,
+    trustScore: item.trustScore,
     raw: item,
   };
 }
@@ -301,6 +365,11 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSh
     paddingHorizontal: 15,
     marginBottom: 10,
   },
+  filterScroll: {
+    gap: 10,
+    paddingRight: 8,
+    alignItems: 'center',
+  },
   filterBtn: {
     padding: 10,
     backgroundColor: theme.colors.surface,
@@ -309,6 +378,26 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSh
     borderWidth: 1,
     borderColor: theme.colors.border,
     ...theme.shadows.soft,
+  },
+  quickChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  quickChipActive: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  quickChipText: {
+    color: theme.colors.textPrimary,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  quickChipTextActive: {
+    color: '#181411',
   },
   sectionHeader: {
     flexDirection: 'row',

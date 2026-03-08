@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import {
     View,
     Text,
@@ -16,10 +17,11 @@ import Colors from '../src/constants/Colors';
 import Theme from '../src/constants/Theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, ShieldAlert, CheckCircle, CreditCard, ChevronRight, Fingerprint } from 'lucide-react-native';
+import { trackMarketplaceEvent } from '../src/services/analytics';
 
 export default function VerificationScreen() {
     const router = useRouter();
-    const { user, verifyUser } = useAuth();
+    const { user, submitVerification, refreshVerificationStatus } = useAuth();
 
     const [isVerifying, setIsVerifying] = useState(false);
     const [verificationMethod, setVerificationMethod] = useState<'digilocker' | 'pan' | null>(null);
@@ -28,6 +30,10 @@ export default function VerificationScreen() {
     const [permission, requestPermission] = useCameraPermissions();
     const [isLivenessChecking, setIsLivenessChecking] = useState(false);
     const [livenessTask, setLivenessTask] = useState('');
+
+    useEffect(() => {
+        refreshVerificationStatus();
+    }, [refreshVerificationStatus]);
 
     const startVerification = async (method: 'digilocker' | 'pan') => {
         setVerificationMethod(method);
@@ -68,18 +74,23 @@ export default function VerificationScreen() {
     const handleLivenessResult = async (success: boolean, message: string) => {
         if (!success) {
             Alert.alert('Security Alert: Verification Halted', message);
-            await verifyUser(false);
             return;
         }
 
         setIsVerifying(true);
         setTimeout(async () => {
             try {
-                await verifyUser(true);
+                await submitVerification(verificationMethod || 'digilocker', 0.992, message);
+                await refreshVerificationStatus();
+                trackMarketplaceEvent({
+                    name: 'verification_submitted',
+                    entityType: 'verification',
+                    metadata: { method: verificationMethod || 'digilocker' },
+                });
                 setIsVerifying(false);
                 Alert.alert(
-                    'Verification Successful',
-                    'Your identity and liveness have been securely verified.',
+                    'Verification Submitted',
+                    'Your KYC package and liveness signals were submitted to the backend review pipeline. Access unlocks automatically after approval.',
                     [{ text: 'Continue', onPress: () => router.back() }]
                 );
             } catch (error) {
@@ -88,7 +99,7 @@ export default function VerificationScreen() {
                     'Verification Pending Backend Approval',
                     error instanceof Error
                         ? error.message
-                        : 'This verification flow cannot approve payout access on its own yet.'
+                        : 'This verification flow could not submit your case.'
                 );
             }
         }, 2000);
@@ -146,16 +157,18 @@ export default function VerificationScreen() {
                     )}
                 </LinearGradient>
                 <Text style={styles.title}>
-                    {user?.isVerified ? 'Identity Verified' : 'Verify Your Identity'}
+                    {user?.isVerified ? 'Identity Verified' : 'Verification Review'}
                 </Text>
                 <Text style={styles.subtitle}>
                     {user?.isVerified
                         ? 'Your account is fully verified and secure. You can now borrow and lend with confidence.'
-                        : 'To ensure a safe and trustworthy community, all users must complete KYC verification before participating.'}
+                        : user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review'
+                            ? 'Your submission is under review. Secure payout and booking access unlock automatically after backend approval.'
+                            : 'To ensure a safe and trustworthy community, all users must complete KYC verification before participating.'}
                 </Text>
             </View>
 
-            {!user?.isVerified && (
+            {!user?.isVerified && user?.verificationStatus !== 'submitted' && user?.verificationStatus !== 'under_review' && (
                 <View style={styles.optionsContainer}>
                     <Text style={styles.sectionTitle}>Select Verification Method</Text>
 
@@ -192,6 +205,27 @@ export default function VerificationScreen() {
                             <Text style={styles.optionSubtitle}>Verify using your 10-digit PAN number and name matching.</Text>
                         </View>
                         <ChevronRight color={Colors.text.placeholder} size={20} />
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {(user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review' || user?.verificationStatus === 'rejected' || user?.verificationStatus === 'needs_resubmission') && !user?.isVerified && (
+                <View style={styles.verifiedCard}>
+                    <ShieldAlert color={user?.verificationStatus === 'rejected' ? '#b3261e' : '#ed6c02'} size={32} />
+                    <Text style={styles.verifiedTitle}>
+                        {user?.verificationStatus === 'rejected'
+                            ? 'Verification Rejected'
+                            : user?.verificationStatus === 'needs_resubmission'
+                                ? 'Resubmission Needed'
+                                : 'Verification Under Review'}
+                    </Text>
+                    <Text style={styles.verifiedText}>
+                        {user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review'
+                            ? 'Your documents and liveness signals were received. Our backend review pipeline is validating them now.'
+                            : user?.verificationReviewNote || 'Please retry with clearer information and complete trust signals.'}
+                    </Text>
+                    <TouchableOpacity style={styles.backButton} onPress={() => refreshVerificationStatus()}>
+                        <Text style={styles.backButtonText}>Refresh Status</Text>
                     </TouchableOpacity>
                 </View>
             )}

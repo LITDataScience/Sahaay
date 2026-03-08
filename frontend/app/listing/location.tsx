@@ -6,12 +6,20 @@ import { ChevronRight, LocateFixed, MapPin, ShieldEllipsis } from 'lucide-react-
 import { useAppTheme } from '../../src/theme/provider';
 import { LISTING_RADIUS_OPTIONS } from '../../src/features/listings/types';
 import { useListingDraftStore } from '../../src/features/listings/store/useListingDraftStore';
+import { useAnalyzeListingDraft } from '../../src/entities/listing/api';
 
 export default function ListingLocationScreen() {
     const router = useRouter();
     const { theme } = useAppTheme();
     const styles = createStyles(theme);
     const draft = useListingDraftStore();
+    const analysisQuery = useAnalyzeListingDraft({
+        category: draft.category,
+        radiusKm: draft.radiusKm,
+        location: draft.location || undefined,
+        title: draft.title,
+        description: draft.description,
+    }, Boolean(draft.category || draft.location || draft.radiusKm));
     const [manualLocality, setManualLocality] = useState(draft.location?.locality ?? '');
     const [manualCity, setManualCity] = useState(draft.location?.city ?? '');
     const [manualState, setManualState] = useState(draft.location?.state ?? '');
@@ -166,6 +174,11 @@ export default function ListingLocationScreen() {
                     <Text style={styles.noteBody}>
                         Tight radius targeting improves conversion, reduces bad requests, and makes your listing feel exclusive.
                     </Text>
+                    {analysisQuery.data && (
+                        <Text style={styles.noteBody}>
+                            AI recommendation: {analysisQuery.data.suggestedRadiusKm} km radius for this category and locality profile.
+                        </Text>
+                    )}
                 </View>
             </View>
 

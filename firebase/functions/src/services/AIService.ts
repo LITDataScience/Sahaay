@@ -1,44 +1,63 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AIProviderService } from './AIProviderService';
 
-// In production, this should be fetched securely from Google Cloud Secret Manager or Firebase parameters
-const apiKey = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(apiKey);
+export type ModerationResult = {
+    safe: boolean;
+    labels: string[];
+    score: number;
+    summary: string;
+};
 
 export class AIService {
-    static async moderateListing(itemData: any): Promise<boolean> {
-        if (!apiKey) {
-            console.warn('Gemini API key not set in environment, skipping strict moderation.');
-            return true; // Fail open if no key for local dev
-        }
+    static async moderateListing(itemData: any): Promise<ModerationResult> {
+        const heuristic = heuristicModeration(itemData);
 
-        try {
-            // Using the robust generalized 1.5-pro model for complex text/image pattern analysis
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        const prompt = `
+You are a strict Trust & Safety AI for a hyperlocal Indian marketplace called Sahaay.
+Analyze the listing and return JSON:
+{
+  "safe": boolean,
+  "labels": ["unsafe_image" | "illegal_or_restricted" | "possible_counterfeit" | "unclear_photos" | "missing_critical_details" | "suspicious_claims"],
+  "score": number,
+  "summary": string
+}
 
-            const prompt = `
-                You are a strict Trust & Safety AI for a hyperlocal Indian marketplace called "Sahaay".
-                Analyze the following item listing for any potential fraud, illegal contraband, weapons, or terms of service violations.
-                Return ONLY the exact word "PASS" if the listing is safe.
-                Return ONLY the exact word "FAIL" if the listing is unsafe.
-                
-                Listing Title: ${itemData.title || ''}
-                Listing Description: ${itemData.description || ''}
-                Listing Price: ${itemData.price || ''}
-            `;
+Listing title: ${itemData.title || ''}
+Listing description: ${itemData.description || ''}
+Listing category: ${itemData.category || ''}
+Listing price: ${itemData.pricePerDay || itemData.price || 0}
+Image count: ${Array.isArray(itemData.images) ? itemData.images.length : 0}
+`;
 
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text().trim().toUpperCase();
-
-            if (text.includes("FAIL")) {
-                console.warn(`Listing flagged by Gemini AI: ${itemData.title}`);
-                return false;
-            }
-            return true;
-        } catch (error) {
-            console.error('Error generating AI moderation content:', error);
-            // Default to manual review (fail-safe) if AI throws an error
-            return false;
-        }
+        return await AIProviderService.generateStructuredObject(prompt, heuristic) || heuristic;
     }
+}
+
+function heuristicModeration(itemData: any): ModerationResult {
+    const content = `${itemData.title || ''} ${itemData.description || ''}`.toLowerCase();
+    const labels: string[] = [];
+
+    if (/weapon|gun|pistol|explosive|drugs|contraband/.test(content)) {
+        labels.push('illegal_or_restricted');
+    }
+    if ((itemData.description || '').trim().length < 20) {
+        labels.push('missing_critical_details');
+    }
+    if (!Array.isArray(itemData.images) || itemData.images.length === 0) {
+        labels.push('unclear_photos');
+    }
+    if (/guaranteed profit|no questions asked|unlimited/.test(content)) {
+        labels.push('suspicious_claims');
+    }
+
+    const safe = !labels.includes('illegal_or_restricted');
+    return {
+        safe,
+        labels,
+        score: safe ? Math.max(0.18, labels.length * 0.12) : 0.96,
+        summary: safe
+            ? labels.length
+                ? 'Listing is allowed but should be improved before scaling visibility.'
+                : 'Listing passed marketplace safety checks.'
+            : 'Listing requires manual intervention due to policy risk.',
+    };
 }

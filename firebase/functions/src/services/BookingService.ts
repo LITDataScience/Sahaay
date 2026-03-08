@@ -50,6 +50,43 @@ export class BookingService {
     private readonly db = admin.firestore();
     private readonly trustService = new TrustService();
 
+    async getBookingQuote(data: BookingRequest) {
+        const itemSnap = await this.db.collection('items').doc(data.itemId).get();
+        if (!itemSnap.exists) {
+            throw new Error('Item does not exist.');
+        }
+
+        const itemData = itemSnap.data();
+        if (itemData?.status !== 'active') {
+            throw new Error('Item is not available for booking.');
+        }
+
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        if (start >= end) {
+            throw new Error('End date must be after start date.');
+        }
+
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const baseAmount = days * (itemData?.pricePerDay || 0);
+        const depositAmount = itemData?.deposit || 0;
+        const platformFee = Math.round(baseAmount * 0.10);
+        const totalAmount = baseAmount + depositAmount + platformFee;
+
+        return {
+            itemId: data.itemId,
+            days,
+            baseAmount,
+            depositAmount,
+            platformFee,
+            totalAmount,
+            currency: 'INR',
+            availabilityStatus: 'available',
+            lenderId: itemData?.ownerId,
+        };
+    }
+
     /**
      * Creates a new booking using XState determinism and an Idempotency Key
      * to prevent double-billing on network retries.

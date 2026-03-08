@@ -9,6 +9,7 @@ import { Suspense, useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ThemeProvider, useAppTheme } from '../src/theme/provider';
 import { activateAppCheck } from '../src/services/AppCheckService';
+import { flushMarketplaceEvents } from '../src/services/analytics';
 
 // Export Expo Router Error Boundary to catch deep-link rendering crashes
 export { ErrorBoundary } from 'expo-router';
@@ -21,6 +22,7 @@ function RootLayoutNav() {
 
     useEffect(() => {
         activateAppCheck();
+        flushMarketplaceEvents();
     }, []);
 
     return (
@@ -39,6 +41,8 @@ function RootLayoutNav() {
                 <Stack.Screen name="booking" options={{ title: 'Book Item' }} />
                 <Stack.Screen name="handshake" options={{ title: 'Escrow Handshake' }} />
                 <Stack.Screen name="verification" options={{ title: 'KYC Verification' }} />
+                <Stack.Screen name="support" options={{ title: 'Support Copilot' }} />
+                <Stack.Screen name="admin/reviews" options={{ title: 'Verification Review Console' }} />
                 <Stack.Screen name="listing/create" options={{ title: 'Create Listing' }} />
                 <Stack.Screen name="listing/location" options={{ title: 'Listing Location' }} />
                 <Stack.Screen name="listing/pricing" options={{ title: 'Listing Pricing' }} />

@@ -18,6 +18,9 @@ export type Item = {
 	distance: string;
     locality?: string;
     radiusKm?: number;
+    verificationLevel?: 'verified' | 'pending';
+    matchReasons?: string[];
+    trustScore?: number;
 };
 
 type Props = {
@@ -34,7 +37,7 @@ const ItemCard: React.FC<Props> = ({ item, onPress }) => {
 			<Image source={{ uri: item.image }} style={styles.itemImage} />
             <View style={styles.imageBadge}>
                 <ShieldCheck size={12} color={theme.colors.accentStrong} />
-                <Text style={styles.imageBadgeText}>Verified</Text>
+                <Text style={styles.imageBadgeText}>{item.verificationLevel === 'verified' ? 'Verified' : 'Reviewing'}</Text>
             </View>
 			<View style={styles.itemInfo}>
 				<Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
@@ -63,6 +66,15 @@ const ItemCard: React.FC<Props> = ({ item, onPress }) => {
 						<Text style={styles.metaText}>{item.distance}</Text>
 					</View>
 				</View>
+                {!!item.matchReasons?.length && (
+                    <View style={styles.reasonPillRow}>
+                        {item.matchReasons.slice(0, 2).map((reason) => (
+                            <View key={reason} style={styles.reasonPill}>
+                                <Text style={styles.reasonPillText}>{reason}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
                 <View style={styles.ctaRow}>
                     <Text style={styles.ctaText}>See details</Text>
                     <ArrowUpRight size={14} color={theme.colors.accentStrong} />
@@ -176,6 +188,25 @@ const createStyles = (theme: ReturnType<typeof useAppTheme>['theme']) => StyleSh
         alignItems: 'center',
         justifyContent: 'flex-end',
         gap: 4,
+    },
+    reasonPillRow: {
+        marginTop: 10,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    reasonPill: {
+        borderRadius: theme.radius.pill,
+        backgroundColor: theme.colors.surfaceAlt,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+    },
+    reasonPillText: {
+        color: theme.colors.textSecondary,
+        fontSize: 11,
+        fontWeight: '700',
     },
     ctaText: {
         color: theme.colors.accentStrong,
