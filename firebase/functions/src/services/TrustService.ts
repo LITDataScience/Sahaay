@@ -5,6 +5,7 @@ export type TrustedUserProfile = {
     phone?: string;
     isVerified?: boolean;
     kycStatus?: 'pending' | 'verified' | 'failed';
+    verificationStatus?: 'not_started' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'needs_resubmission';
     beneficiaryId?: string | null;
     reputationScore?: number;
 };
@@ -21,7 +22,12 @@ export class TrustService {
 
         const userData = userSnap.data() as TrustedUserProfile | undefined;
 
-        if (!userData || userData.isVerified !== true || userData.kycStatus !== 'verified') {
+        if (
+            !userData ||
+            userData.isVerified !== true ||
+            userData.kycStatus !== 'verified' ||
+            userData.verificationStatus !== 'approved'
+        ) {
             throw new Error('Complete KYC verification before publishing listings or booking items.');
         }
 

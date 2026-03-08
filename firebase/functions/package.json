@@ -9,8 +9,8 @@
         "start": "npm run shell",
         "deploy": "firebase deploy --only functions",
         "logs": "firebase functions:log",
-        "test": "vitest run",
-        "test:watch": "vitest"
+        "test": "vitest run src/__tests__",
+        "test:watch": "vitest src/__tests__"
     },
     "engines": {
         "node": "20"

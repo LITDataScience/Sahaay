@@ -22,6 +22,7 @@ describe('AuthContext', () => {
         // Since it's async, we might need to wait for state to settle, but for this mock, 
         // we assume the user is set. In a real test we wait for result.current.user
         expect(result.current).toHaveProperty('user');
-        expect(result.current).toHaveProperty('verifyUser');
+        expect(result.current).toHaveProperty('submitVerification');
+        expect(result.current).toHaveProperty('refreshVerificationStatus');
     });
 });

@@ -43,7 +43,12 @@ export class TypesenseSync {
 
         // Only index safe items if using AI Moderation
         if (data.status === 'flagged_by_ai') {
-            console.log(`Skipping indexing for flagged item: ${itemId}`);
+            console.log(`Removing flagged item ${itemId} from Typesense`);
+            try {
+                await typesenseClient.collections('items').documents(itemId).delete();
+            } catch (err: any) {
+                console.error(`Error removing flagged item ${itemId} from Typesense:`, err.message);
+            }
             return;
         }
 
@@ -63,6 +68,11 @@ export class TypesenseSync {
             state: data.state || '',
             radiusKm: data.radiusKm || data.visibility?.radiusKm || 0,
             payoutMethod: data.payoutConfig?.payoutMethod || 'upi',
+            verificationLevel: data.verificationLevel || (data.payoutConfig?.payoutEligible ? 'verified' : 'pending'),
+            trustScore: data.trustScore ?? (data.payoutConfig?.payoutEligible ? 0.92 : 0.45),
+            moderationLabels: data.moderation?.labels || [],
+            moderationScore: data.moderation?.score || 0,
+            aiSummary: data.moderation?.summary || '',
             location: data.location
                 ? [data.location.latitude, data.location.longitude]
                 : null,

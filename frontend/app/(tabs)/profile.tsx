@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, HelpCircle, ShieldAlert, ShieldCheck, Handshake, MoonStar, PlusCircle, Coins } from 'lucide-react-native';
+import { Settings, LogOut, Heart, ShoppingBag, List, Edit2, HelpCircle, ShieldAlert, ShieldCheck, Handshake, MoonStar, PlusCircle, Coins, ClipboardCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { Routes } from '../../src/types/navigation';
 import { useAppTheme } from '../../src/theme/provider';
@@ -17,7 +17,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { theme, mode, toggleTheme } = useAppTheme();
   const styles = createStyles(theme);
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, refreshVerificationStatus } = useAuth();
   const initials = useMemo(() => user?.name?.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'U', [user]);
   const [name, setName] = useState(user?.name || '');
   const [isEditing, setIsEditing] = useState(false);
@@ -25,7 +25,8 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     getLocalPublishedListings().then((listings) => setListingCount(listings.length));
-  }, []);
+    refreshVerificationStatus();
+  }, [refreshVerificationStatus]);
 
   const onSave = async () => {
     await updateProfile({ name });
@@ -39,7 +40,10 @@ const ProfileScreen = () => {
     { icon: Handshake, label: 'P2P Escrow Handover', onPress: () => router.push(Routes.Modals.Handshake) },
     { icon: Heart, label: 'My Reviews', onPress: () => { } },
     { icon: Settings, label: 'Settings', onPress: () => { } },
-    { icon: HelpCircle, label: 'Support', onPress: () => { } },
+    { icon: HelpCircle, label: 'Support', onPress: () => router.push(Routes.Auth.Support) },
+    ...(user?.role === 'admin'
+      ? [{ icon: ClipboardCheck, label: 'Verification Review Console', onPress: () => router.push(Routes.Auth.AdminReviews) }]
+      : []),
   ];
 
   return (
@@ -108,11 +112,25 @@ const ProfileScreen = () => {
               <ShieldAlert size={24} color={theme.colors.danger} />
             </View>
             <View style={styles.verificationTextContainer}>
-              <Text style={styles.unverifiedTitle}>Verification Pending</Text>
-              <Text style={styles.unverifiedSubtitle}>Complete KYC to borrow/lend items safely.</Text>
+              <Text style={styles.unverifiedTitle}>
+                {user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review'
+                  ? 'Verification Under Review'
+                  : user?.verificationStatus === 'rejected'
+                    ? 'Verification Rejected'
+                    : user?.verificationStatus === 'needs_resubmission'
+                      ? 'Resubmission Needed'
+                      : 'Verification Pending'}
+              </Text>
+              <Text style={styles.unverifiedSubtitle}>
+                {user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review'
+                  ? 'Our backend review pipeline is validating your KYC package now.'
+                  : user?.verificationReviewNote || 'Complete KYC to borrow/lend items safely.'}
+              </Text>
             </View>
             <View style={styles.verifyAction}>
-              <Text style={styles.verifyActionText}>Verify Now</Text>
+              <Text style={styles.verifyActionText}>
+                {user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review' ? 'View Status' : 'Verify Now'}
+              </Text>
             </View>
           </TouchableOpacity>
         )}

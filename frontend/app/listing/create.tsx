@@ -7,12 +7,29 @@ import { useRouter } from 'expo-router';
 import { useAppTheme } from '../../src/theme/provider';
 import { LISTING_CATEGORIES, LISTING_CONDITIONS } from '../../src/features/listings/types';
 import { useListingDraftStore } from '../../src/features/listings/store/useListingDraftStore';
+import { useAnalyzeListingDraft } from '../../src/entities/listing/api';
+import { trackMarketplaceEvent } from '../../src/services/analytics';
 
 export default function CreateListingFlowScreen() {
     const router = useRouter();
     const { theme } = useAppTheme();
     const styles = createStyles(theme);
     const draft = useListingDraftStore();
+    const analysisQuery = useAnalyzeListingDraft({
+        title: draft.title.trim(),
+        description: draft.description.trim(),
+        category: draft.category,
+        condition: draft.condition,
+        images: draft.images,
+    }, Boolean(draft.title || draft.description || draft.images.length));
+
+    React.useEffect(() => {
+        trackMarketplaceEvent({
+            name: 'listing_draft_started',
+            entityType: 'listing_draft',
+            metadata: { stage: 'create' },
+        });
+    }, []);
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -144,6 +161,22 @@ export default function CreateListingFlowScreen() {
                     </Text>
                 </View>
             </View>
+
+            {analysisQuery.data && (
+                <View style={styles.previewCard}>
+                    <Package2 size={18} color={theme.colors.accentStrong} />
+                    <View style={styles.previewCopy}>
+                        <Text style={styles.previewTitle}>AI polish</Text>
+                        <Text style={styles.previewBody}>Readiness score: {analysisQuery.data.readinessScore}/100</Text>
+                        <Text style={styles.previewBody}>
+                            Suggested title: {analysisQuery.data.titleSuggestions[0] || 'Keep your current title'}
+                        </Text>
+                        <Text style={styles.previewBody}>
+                            Suggested category: {analysisQuery.data.suggestedCategory || draft.category}
+                        </Text>
+                    </View>
+                </View>
+            )}
 
             <TouchableOpacity style={styles.cta} onPress={goNext}>
                 <Text style={styles.ctaText}>Next: Location & Radius</Text>

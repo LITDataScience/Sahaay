@@ -7,6 +7,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 import { SecurityService } from '../services/SecurityService';
 
 export type User = {
@@ -14,9 +15,13 @@ export type User = {
   name: string;
   phone: string;
   avatarInitials: string;
+  role: 'user' | 'admin';
   reputation: number;
   isVerified: boolean;
   kycStatus: 'pending' | 'verified' | 'failed';
+  verificationStatus: 'not_started' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'needs_resubmission';
+  verificationMethod: 'digilocker' | 'pan' | null;
+  verificationReviewNote: string;
 };
 
 export type IdentityGate = {
@@ -34,7 +39,8 @@ type AuthContextValue = {
   loginWithPhoneOtp: (phone: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  verifyUser: (success: boolean) => Promise<void>;
+  submitVerification: (method: 'digilocker' | 'pan', livenessConfidence: number, notes?: string) => Promise<void>;
+  refreshVerificationStatus: () => Promise<void>;
 };
 
 const STORAGE_KEY = 'sahaay.auth.user.v2';
@@ -79,9 +85,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const hydratedUser = buildUserRecord(firebaseUser.uid, {
         phone: firebaseUser.phoneNumber || localUser?.phone || '',
         name: profile.name || localUser?.name || 'New User',
+        role: profile.role ?? localUser?.role ?? 'user',
         reputationScore: profile.reputationScore ?? localUser?.reputation ?? 4.5,
         isVerified: profile.isVerified ?? localUser?.isVerified ?? false,
         kycStatus: profile.kycStatus ?? localUser?.kycStatus ?? 'pending',
+        verificationStatus: profile.verificationStatus ?? localUser?.verificationStatus ?? 'not_started',
+        verificationMethod: profile.verificationMethod ?? localUser?.verificationMethod ?? null,
+        verificationReviewNote: profile.verificationReviewNote ?? localUser?.verificationReviewNote ?? '',
       });
 
       setUser(hydratedUser);
@@ -148,9 +158,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const newUser = buildUserRecord(firebaseUser.uid, {
       phone: normalizeIndianPhone(phone),
       name: previous.name || 'New User',
+      role: previous.role ?? 'user',
       reputationScore: previous.reputationScore ?? 4.5,
       isVerified: previous.isVerified ?? false,
       kycStatus: previous.kycStatus ?? 'pending',
+      verificationStatus: previous.verificationStatus ?? 'not_started',
+      verificationMethod: previous.verificationMethod ?? null,
+      verificationReviewNote: previous.verificationReviewNote ?? '',
     });
 
     await userRef.set({
@@ -161,6 +175,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       kycStatus: newUser.kycStatus,
       reputationScore: newUser.reputation,
       authProvider: pendingFirebaseConfirmation ? 'phone' : 'anonymous_demo',
+      verificationStatus: previous.verificationStatus ?? 'not_started',
+      verificationMethod: previous.verificationMethod ?? null,
+      verificationReviewNote: previous.verificationReviewNote ?? '',
       updatedAt: firestore.FieldValue.serverTimestamp(),
       createdAt: previous.createdAt || firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -207,37 +224,92 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [persist, user]);
 
-  const verifyUser = useCallback(async (success: boolean) => {
-    if (success) {
-      throw new Error('Live KYC approval must be issued by the backend review pipeline. This client flow cannot self-verify a payout account yet.');
-    }
-
-    if (!user) {
+  const refreshVerificationStatus = useCallback(async () => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
       return;
     }
 
+    const response = await functions().httpsCallable('tRPC')({
+      path: 'getVerificationStatus',
+      input: {},
+    });
+    const data = response.data as {
+      status: User['verificationStatus'];
+      method: User['verificationMethod'];
+      isVerified: boolean;
+      kycStatus: User['kycStatus'];
+      reviewNote: string;
+    };
+
+    setUser((prev) => {
+      if (!prev) return prev;
+      const nextUser: User = {
+        ...prev,
+        isVerified: data.isVerified,
+        kycStatus: data.kycStatus,
+        verificationStatus: data.status,
+        verificationMethod: data.method,
+        verificationReviewNote: data.reviewNote || '',
+      };
+      setIdentityGate(buildIdentityGate(currentUser.isAnonymous, nextUser));
+      persist(nextUser);
+      return nextUser;
+    });
+  }, [persist]);
+
+  const submitVerification = useCallback(async (method: 'digilocker' | 'pan', livenessConfidence: number, notes?: string) => {
+    const currentUser = auth().currentUser;
+    if (!currentUser) {
+      return;
+    }
+
+    await functions().httpsCallable('tRPC')({
+      path: 'submitVerification',
+      input: {
+        method,
+        livenessConfidence,
+        notes: notes || '',
+      },
+    });
+
     const nextUser: User = {
-      ...user,
-      isVerified: success,
-      kycStatus: success ? 'verified' : 'failed'
+      ...(user || buildUserRecord(currentUser.uid, {
+        phone: currentUser.phoneNumber || '',
+        name: 'New User',
+        role: 'user',
+        reputationScore: 4.5,
+        isVerified: false,
+        kycStatus: 'pending',
+        verificationStatus: 'not_started',
+        verificationMethod: null,
+        verificationReviewNote: '',
+      })),
+      verificationStatus: 'submitted',
+      verificationMethod: method,
+      verificationReviewNote: '',
+      isVerified: false,
+      kycStatus: 'pending',
     };
 
     setUser(nextUser);
-    setIdentityGate(buildIdentityGate(auth().currentUser?.isAnonymous === true, nextUser));
+    setIdentityGate(buildIdentityGate(currentUser.isAnonymous, nextUser));
     await persist(nextUser);
-
-    if (auth().currentUser && nextUser) {
-      await firestore().collection('users').doc(auth().currentUser!.uid).set({
-        isVerified: nextUser.isVerified,
-        kycStatus: nextUser.kycStatus,
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
   }, [persist, user]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, identityGate, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser }),
-    [user, identityGate, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, verifyUser]
+    () => ({
+      user,
+      identityGate,
+      isLoading,
+      requestPhoneOtp,
+      loginWithPhoneOtp,
+      logout,
+      updateProfile,
+      submitVerification,
+      refreshVerificationStatus,
+    }),
+    [user, identityGate, isLoading, requestPhoneOtp, loginWithPhoneOtp, logout, updateProfile, submitVerification, refreshVerificationStatus]
   );
 
   return (
@@ -264,8 +336,12 @@ function buildUserRecord(
     phone: string;
     name: string;
     reputationScore: number;
+    role: User['role'];
     isVerified: boolean;
     kycStatus: User['kycStatus'];
+    verificationStatus: User['verificationStatus'];
+    verificationMethod: User['verificationMethod'];
+    verificationReviewNote: string;
   }
 ): User {
   const initials = payload.name
@@ -281,9 +357,13 @@ function buildUserRecord(
     name: payload.name,
     phone: payload.phone,
     avatarInitials: initials,
+    role: payload.role,
     reputation: payload.reputationScore,
     isVerified: payload.isVerified,
     kycStatus: payload.kycStatus,
+    verificationStatus: payload.verificationStatus,
+    verificationMethod: payload.verificationMethod,
+    verificationReviewNote: payload.verificationReviewNote,
   };
 }
 
@@ -297,12 +377,14 @@ function buildIdentityGate(isAnonymousSession: boolean, user: User | null): Iden
     };
   }
 
-  if (!user || user.isVerified !== true || user.kycStatus !== 'verified') {
+  if (!user || user.isVerified !== true || user.kycStatus !== 'verified' || user.verificationStatus !== 'approved') {
     return {
       canUsePayoutFlows: false,
       isAnonymousSession: false,
       requiresKyc: true,
-      reason: 'Complete KYC verification before publishing listings or booking items.',
+      reason: user?.verificationStatus === 'submitted' || user?.verificationStatus === 'under_review'
+        ? 'Your verification is under review. Publishing and booking unlock automatically after approval.'
+        : 'Complete KYC verification before publishing listings or booking items.',
     };
   }
 

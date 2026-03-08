@@ -6,7 +6,8 @@ import { useAuth } from '../../src/context/AuthContext';
 import { useAppTheme } from '../../src/theme/provider';
 import { useListingDraftStore } from '../../src/features/listings/store/useListingDraftStore';
 import { saveLocalPublishedListing } from '../../src/features/listings/storage';
-import { createListingRemote } from '../../src/entities/listing/api';
+import { createListingRemote, useAnalyzeListingDraft } from '../../src/entities/listing/api';
+import { trackMarketplaceEvent } from '../../src/services/analytics';
 import { Routes } from '../../src/types/navigation';
 
 export default function ListingReviewScreen() {
@@ -15,6 +16,18 @@ export default function ListingReviewScreen() {
     const { theme } = useAppTheme();
     const styles = createStyles(theme);
     const draft = useListingDraftStore();
+    const analysisQuery = useAnalyzeListingDraft({
+        title: draft.title.trim(),
+        description: draft.description.trim(),
+        category: draft.category,
+        condition: draft.condition,
+        images: draft.images,
+        pricePerDay: Number(draft.pricePerDay || 0),
+        deposit: Number(draft.deposit || 0),
+        radiusKm: draft.radiusKm,
+        payoutMethod: draft.payoutMethod,
+        location: draft.location || undefined,
+    }, true);
 
     const economics = useMemo(() => {
         const pricePerDay = Number(draft.pricePerDay || 0);
@@ -77,6 +90,12 @@ export default function ListingReviewScreen() {
 
             await saveLocalPublishedListing(remoteItem);
             draft.reset();
+            trackMarketplaceEvent({
+                name: 'listing_published',
+                entityId: remoteItem.id,
+                entityType: 'item',
+                metadata: { pricePerDay: remoteItem.pricePerDay, category: remoteItem.category },
+            });
 
             Alert.alert('Listing published', 'Your verified listing is now ready to appear in nearby discovery.');
             router.replace('/(tabs)' as never);
@@ -138,6 +157,20 @@ export default function ListingReviewScreen() {
                     <Text style={styles.detailLabel}>Platform fee</Text>
                     <Text style={styles.detailValue}>₹{economics.platformFee}</Text>
                 </View>
+                {analysisQuery.data && (
+                    <>
+                        <View style={styles.detailRow}>
+                            <ShieldCheck size={16} color={theme.colors.accentStrong} />
+                            <Text style={styles.detailLabel}>AI readiness score</Text>
+                            <Text style={styles.detailValueStrong}>{analysisQuery.data.readinessScore}/100</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <ShieldCheck size={16} color={theme.colors.accentStrong} />
+                            <Text style={styles.detailLabel}>AI publish note</Text>
+                            <Text style={styles.detailValue}>{analysisQuery.data.readinessSummary}</Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             <TouchableOpacity

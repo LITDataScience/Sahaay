@@ -14,6 +14,8 @@ export const Routes = {
     Auth: {
         Login: '/login' as Href<string>,
         Verification: '/verification' as Href<string>,
+        Support: '/support' as Href<string>,
+        AdminReviews: '/admin/reviews' as Href<string>,
     },
     App: {
         Root: '/(tabs)' as Href<string>,
