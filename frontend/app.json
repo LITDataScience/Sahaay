@@ -73,7 +73,8 @@
         {
           "android": {
             "compileSdkVersion": 35,
-            "targetSdkVersion": 35
+            "targetSdkVersion": 35,
+            "enableProguardInReleaseBuilds": true
           },
           "ios": {
             "useFrameworks": "static"

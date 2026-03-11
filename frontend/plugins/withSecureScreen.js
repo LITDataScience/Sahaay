@@ -1,4 +1,4 @@
-const { withMainActivity } = require('@expo/config-plugins');
+const { withMainActivity } = require('expo/config-plugins');
 
 /**
  * An Expo Config Plugin to enforce WindowManager.LayoutParams.FLAG_SECURE
