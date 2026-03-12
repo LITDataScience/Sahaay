@@ -1,32 +1,122 @@
-const { withAppBuildGradle, withSettingsGradle } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+const { withAppBuildGradle, withSettingsGradle } = require('expo/config-plugins');
+
+const WINDOWS_SHORT_PATH_PACKAGES = [
+  {
+    packageName: 'react-native-screens',
+    projectName: ':react-native-screens',
+    shortDir: 'rns',
+  },
+  {
+    packageName: 'react-native-worklets',
+    projectName: ':react-native-worklets',
+    shortDir: 'rnw',
+  },
+  {
+    packageName: 'react-native-reanimated',
+    projectName: ':react-native-reanimated',
+    shortDir: 'rnr',
+  },
+  {
+    packageName: 'expo-modules-core',
+    projectName: ':expo-modules-core',
+    shortDir: 'emc',
+  },
+  {
+    packageName: 'react-native-gesture-handler',
+    projectName: ':react-native-gesture-handler',
+    shortDir: 'rngh',
+  },
+  {
+    packageName: 'react-native-safe-area-context',
+    projectName: ':react-native-safe-area-context',
+    shortDir: 'rnsac',
+  },
+  {
+    packageName: 'react-native-svg',
+    projectName: ':react-native-svg',
+    shortDir: 'rnsvg',
+  },
+];
+
+function ensurePackageJunctions(platformProjectRoot) {
+  if (process.platform !== 'win32') {
+    return [];
+  }
+
+  const shortRoot = path.join(platformProjectRoot, '.shortdeps');
+
+  return WINDOWS_SHORT_PATH_PACKAGES.map(
+    ({ packageName, projectName, shortDir }) => {
+      const packageRoot = path.dirname(
+        require.resolve(`${packageName}/package.json`, {
+          paths: [platformProjectRoot],
+        })
+      );
+      const linkPath = path.join(shortRoot, shortDir);
+
+      fs.mkdirSync(shortRoot, { recursive: true });
+      fs.rmSync(linkPath, { recursive: true, force: true });
+      fs.symlinkSync(packageRoot, linkPath, 'junction');
+
+      return {
+        projectName,
+        shortAndroidDir: `.shortdeps/${shortDir}/android`,
+      };
+    }
+  );
+}
 
 module.exports = (config) => {
-  // 1. Fix app/build.gradle to handle monorepo paths correctly
   config = withAppBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes('project.root =')) return config;
+    if (config.modResults.contents.includes('REACT_NATIVE_WORKLETS_NODE_MODULES_DIR')) {
+      return config;
+    }
 
-    // Inject monorepo path resolution at the top
-    const monorepoFix = `
-def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
-def monorepoRoot = new File(projectRoot, "..").getAbsoluteFile().getAbsolutePath()
+    const explicitNodeModuleDirs = `
+def sahaayReactNativePackagePath = ["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()
+def sahaayReactNativeWorkletsPackagePath = ["node", "--print", "require.resolve('react-native-worklets/package.json')"].execute(null, rootDir).text.trim()
+project.ext.set("REACT_NATIVE_NODE_MODULES_DIR", new File(sahaayReactNativePackagePath).getParentFile().absolutePath)
+project.ext.set("REACT_NATIVE_WORKLETS_NODE_MODULES_DIR", new File(sahaayReactNativeWorkletsPackagePath).getParentFile().absolutePath)
 `;
-    config.modResults.contents = monorepoFix + config.modResults.contents;
 
-    // Ensure the react block uses the correct node_modules
-    config.modResults.contents = config.modResults.contents.replace(
-      /autolinkLibrariesWithApp\(\)/,
-      `autolinkLibrariesWithApp(new File(monorepoRoot, "node_modules"))`
-    );
+    config.modResults.contents = `${explicitNodeModuleDirs}\n${config.modResults.contents}`;
 
     return config;
   });
 
-  // 2. Fix settings.gradle to find the React Native Gradle Plugin in the monorepo root
   config = withSettingsGradle(config, (config) => {
-    config.modResults.contents = config.modResults.contents.replace(
-      /includeBuild\(reactNativeGradlePlugin\)/,
-      `// Fixed by Monorepo Plugin\nincludeBuild(reactNativeGradlePlugin)`
-    );
+    const platformProjectRoot = config.modRequest?.platformProjectRoot;
+    const shortPathProjects = platformProjectRoot
+      ? ensurePackageJunctions(platformProjectRoot)
+      : [];
+
+    if (!shortPathProjects.length) {
+      return config;
+    }
+
+    const marker = '// sahaay short native module paths';
+    if (config.modResults.contents.includes(marker)) {
+      return config;
+    }
+
+    const shortPathOverrides = `${marker}
+[
+${shortPathProjects
+  .map(
+    ({ projectName, shortAndroidDir }) =>
+      `  '${projectName}': '${shortAndroidDir}',`
+  )
+  .join('\n')}
+].each { projectName, relativeAndroidDir ->
+  if (findProject(projectName) != null) {
+    project(projectName).projectDir = new File(rootDir, relativeAndroidDir)
+  }
+}
+`;
+
+    config.modResults.contents = `${config.modResults.contents}\n${shortPathOverrides}`;
     return config;
   });
 

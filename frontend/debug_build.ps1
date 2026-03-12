@@ -35,6 +35,12 @@ pnpm install
 Write-Host "Syncing native files (Prebuild)..." -ForegroundColor Cyan
 npx expo prebuild --platform android --clean
 
+# For Windows emulators, build only the x86_64 ABI unless explicitly overridden.
+if ($null -eq $env:ORG_GRADLE_PROJECT_reactNativeArchitectures) {
+    $env:ORG_GRADLE_PROJECT_reactNativeArchitectures = "x86_64"
+}
+Write-Host "React Native Android architectures: $env:ORG_GRADLE_PROJECT_reactNativeArchitectures" -ForegroundColor Gray
+
 # Build and Run
 Write-Host "Starting local Android build and run..." -ForegroundColor Yellow
 npx expo run:android

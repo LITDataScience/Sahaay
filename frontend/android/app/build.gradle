@@ -1,3 +1,9 @@
+
+def sahaayReactNativePackagePath = ["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()
+def sahaayReactNativeWorkletsPackagePath = ["node", "--print", "require.resolve('react-native-worklets/package.json')"].execute(null, rootDir).text.trim()
+project.ext.set("REACT_NATIVE_NODE_MODULES_DIR", new File(sahaayReactNativePackagePath).getParentFile().absolutePath)
+project.ext.set("REACT_NATIVE_WORKLETS_NODE_MODULES_DIR", new File(sahaayReactNativeWorkletsPackagePath).getParentFile().absolutePath)
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"

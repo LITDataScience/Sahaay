@@ -1,0 +1,18 @@
+# Changelog
+
+This file is managed by `semantic-release`.
+
+Releases are created automatically from commits pushed to `main` when at least one commit matches a releasable type.
+
+Release rules:
+- `feat` -> minor release
+- `fix` -> patch release
+- `perf` -> patch release
+- `revert` -> patch release
+- `BREAKING CHANGE` or `type!:` -> major release
+
+Non-releasable commits such as `docs`, `chore`, `ci`, `test`, `style`, and `refactor` do not create a tag unless they include a breaking change marker.
+
+Tags use the format `vX.Y.Z`.
+
+The first generated release entry will appear here after the first successful release run on `main`.
