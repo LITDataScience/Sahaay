@@ -223,8 +223,8 @@ importers:
         specifier: ^15.0.10
         version: 15.0.10(expo@54.0.33)(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))
       lucide-react-native:
-        specifier: ^0.564.0
-        version: 0.564.0(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+        specifier: ^0.577.0
+        version: 0.577.0(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       react:
         specifier: ^19.1.0
         version: 19.1.0
@@ -5475,8 +5475,8 @@ packages:
   lru-memoizer@2.3.0:
     resolution: {integrity: sha512-GXn7gyHAMhO13WSKrIiNfztwxodVsP8IoZ3XfrJV4yH2x0/OeTO/FIaAHTY5YekdGgW94njfuKmyyt1E0mR6Ug==}
 
-  lucide-react-native@0.564.0:
-    resolution: {integrity: sha512-ntpd82JDEusaCkfikkIX2m8KskNSd7mnaVr3ADhAdyncu+Zlo1my2JDWm1E7S3bezgehEl2mz5LYs1eplVUd1g==}
+  lucide-react-native@0.577.0:
+    resolution: {integrity: sha512-blWv/YqBMrgkYGAgm2wgWiGP1+1GNBf4f/sUlpyfEL8mxvSzhr7H/0MTS1xQgtd1B6gPC/JIPgP3kcdFjnh8zg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-native: '*'
@@ -14348,7 +14348,7 @@ snapshots:
       lodash.clonedeep: 4.5.0
       lru-cache: 6.0.0
 
-  lucide-react-native@0.564.0(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
+  lucide-react-native@0.577.0(react-native-svg@15.12.1(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.28.4)(@react-native-community/cli@20.1.2(typescript@5.9.2))(@types/react@19.1.17)(react@19.1.0)
