@@ -4,9 +4,10 @@ module.exports = {
     ignorePatterns: ['/dist/*'],
     overrides: [
         {
-            files: ['*.config.js', '.eslintrc.js', 'plugins/**/*.js'],
+            files: ['*.config.js', '.eslintrc.js', 'plugins/**/*.js', 'jest.setup.js'],
             env: {
                 node: true,
+                jest: true,
             },
         },
     ],
