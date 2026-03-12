@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { useGlobalStore } from '../app/store';
+import { useGlobalStore } from '../store/globalStore';
 import { AppTheme, createTheme, ThemeMode } from './tokens';
 
 type ThemeContextValue = {

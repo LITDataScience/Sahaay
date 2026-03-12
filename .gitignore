@@ -58,6 +58,7 @@ Thumbs.db
 # ----- Temporary files -----
 tmp/
 temp/
+.tmp.driveupload/
 
 # ----- Turborepo -----
 .turbo/

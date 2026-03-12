@@ -92,6 +92,23 @@ project.ext.set("REACT_NATIVE_WORKLETS_NODE_MODULES_DIR", new File(sahaayReactNa
       ? ensurePackageJunctions(platformProjectRoot)
       : [];
 
+    const expoAutolinkingBlock = `extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
+    ex.autolinkLibrariesFromCommand()
+  } else {
+    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
+  }
+}`;
+
+    const communityAutolinkingBlock = `extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  ex.autolinkLibrariesFromCommand()
+}`;
+
+    config.modResults.contents = config.modResults.contents.replace(
+      expoAutolinkingBlock,
+      communityAutolinkingBlock
+    );
+
     if (!shortPathProjects.length) {
       return config;
     }

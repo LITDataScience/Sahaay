@@ -4,10 +4,49 @@
 // SPDX-Header-End
 
 import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
 // eslint-disable-next-line import/no-unresolved
 import * as Keychain from 'react-native-keychain';
 
 const PRIVATE_KEY_ALIAS = 'sahaay.device.privateKey';
+
+function hasNativeKeychainSupport() {
+    return (
+        typeof Keychain?.setGenericPassword === 'function' &&
+        typeof Keychain?.getGenericPassword === 'function' &&
+        typeof Keychain?.resetGenericPassword === 'function'
+    );
+}
+
+async function storePrivateKeyMaterial(privateKeyMaterial: string): Promise<void> {
+    if (hasNativeKeychainSupport()) {
+        await Keychain.setGenericPassword(PRIVATE_KEY_ALIAS, privateKeyMaterial, {
+            accessControl: Keychain.ACCESS_CONTROL?.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
+            accessible: Keychain.ACCESSIBLE?.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+        });
+        return;
+    }
+
+    await SecureStore.setItemAsync(PRIVATE_KEY_ALIAS, privateKeyMaterial);
+}
+
+async function readPrivateKeyMaterial(): Promise<string | null> {
+    if (hasNativeKeychainSupport()) {
+        const credentials = await Keychain.getGenericPassword();
+        return credentials ? credentials.password : null;
+    }
+
+    return SecureStore.getItemAsync(PRIVATE_KEY_ALIAS);
+}
+
+async function clearPrivateKeyMaterial(): Promise<void> {
+    if (hasNativeKeychainSupport()) {
+        await Keychain.resetGenericPassword();
+        return;
+    }
+
+    await SecureStore.deleteItemAsync(PRIVATE_KEY_ALIAS);
+}
 
 export const SecurityService = {
     /**
@@ -23,10 +62,7 @@ export const SecurityService = {
                 rawEntropy
             );
 
-            await Keychain.setGenericPassword(PRIVATE_KEY_ALIAS, privateKeyMaterial, {
-                accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-                accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY
-            });
+            await storePrivateKeyMaterial(privateKeyMaterial);
 
             // Generate a 'Public Key' equivalent to send to the backend
             const publicKeyMaterial = await Crypto.digestStringAsync(
@@ -36,7 +72,7 @@ export const SecurityService = {
 
             return publicKeyMaterial;
         } catch (error) {
-            console.error('Failed to bind device cryptographically:', error);
+            console.warn('Failed to bind device cryptographically:', error);
             throw error;
         }
     },
@@ -46,15 +82,15 @@ export const SecurityService = {
      */
     async signPayload(payload: string): Promise<string> {
         try {
-            const credentials = await Keychain.getGenericPassword();
-            if (!credentials) {
+            const privateKeyMaterial = await readPrivateKeyMaterial();
+            if (!privateKeyMaterial) {
                 throw new Error('Device is not cryptographically bound. Fraud protection active.');
             }
 
             // HMAC-like payload stamping using the private key
             const signature = await Crypto.digestStringAsync(
                 Crypto.CryptoDigestAlgorithm.SHA256,
-                `${payload}:${credentials.password}`
+                `${payload}:${privateKeyMaterial}`
             );
             return signature;
         } catch (error) {
@@ -67,7 +103,7 @@ export const SecurityService = {
      * Removes the cryptographic binding (called on Logout).
      */
     async unbindDevice(): Promise<void> {
-        await Keychain.resetGenericPassword();
+        await clearPrivateKeyMaterial();
     },
 
     /**

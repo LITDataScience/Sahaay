@@ -5,6 +5,10 @@ const projectRoot = __dirname;
 const androidRoot = path.join(projectRoot, 'android');
 const shortRoot = path.join(androidRoot, '.shortdeps');
 
+function normalizePathForGradle(targetPath) {
+  return targetPath.replace(/\\/g, '/');
+}
+
 const shortPathPackages = {
   'react-native-gesture-handler': {
     shortDir: 'rngh',
@@ -58,8 +62,8 @@ const dependencies = Object.fromEntries(
         {
           platforms: {
             android: {
-              sourceDir: path.join(linkPath, 'android'),
-              cmakeListsPath: path.join(linkPath, cmakeListsPath),
+              sourceDir: normalizePathForGradle(path.join(linkPath, 'android')),
+              cmakeListsPath: normalizePathForGradle(path.join(linkPath, cmakeListsPath)),
             },
           },
         },

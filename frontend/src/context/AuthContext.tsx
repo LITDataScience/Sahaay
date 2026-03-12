@@ -44,6 +44,7 @@ type AuthContextValue = {
 };
 
 const STORAGE_KEY = 'sahaay.auth.user.v2';
+const SESSION_MODE_KEY = 'sahaay.auth.session-mode.v1';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 let pendingFirebaseConfirmation: FirebaseAuthTypes.ConfirmationResult | null = null;
@@ -62,7 +63,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Firebase Auth State Listener for App Hydration
   useEffect(() => {
     const unsubscribe = auth().onAuthStateChanged(async (firebaseUser) => {
+      const [raw, sessionMode] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEY),
+        AsyncStorage.getItem(SESSION_MODE_KEY),
+      ]);
+
       if (!firebaseUser) {
+        if (sessionMode === 'demo' && raw) {
+          const localUser = JSON.parse(raw) as User;
+          setUser(localUser);
+          setIdentityGate(buildIdentityGate(true, localUser));
+          setIsLoading(false);
+          return;
+        }
+
         setUser(null);
         setIdentityGate({
           canUsePayoutFlows: false,
@@ -70,13 +84,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           requiresKyc: true,
           reason: 'Complete secure phone sign-in before using listings or bookings.',
         });
-        await AsyncStorage.removeItem(STORAGE_KEY);
+        await Promise.all([
+          AsyncStorage.removeItem(STORAGE_KEY),
+          AsyncStorage.removeItem(SESSION_MODE_KEY),
+        ]);
         setIsLoading(false);
         return;
       }
 
-      const [raw, profileSnap] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEY),
+      const [profileSnap] = await Promise.all([
         firestore().collection('users').doc(firebaseUser.uid).get(),
       ]);
 
@@ -96,7 +112,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setUser(hydratedUser);
       setIdentityGate(buildIdentityGate(firebaseUser.isAnonymous, hydratedUser));
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(hydratedUser));
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(hydratedUser)),
+        AsyncStorage.setItem(SESSION_MODE_KEY, 'firebase'),
+      ]);
       setIsLoading(false);
     });
 
@@ -130,6 +149,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const loginWithPhoneOtp = useCallback(async (phone: string, otp: string) => {
     let firebaseUser = auth().currentUser;
+    let sessionMode: 'firebase' | 'demo' = pendingFirebaseConfirmation ? 'firebase' : 'demo';
+    const normalizedPhone = normalizeIndianPhone(phone);
 
     if (pendingFirebaseConfirmation) {
       const credential = await pendingFirebaseConfirmation.confirm(otp);
@@ -140,59 +161,113 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (!firebaseUser) {
-        const anonymousCredential = await auth().signInAnonymously();
-        firebaseUser = anonymousCredential.user;
+        try {
+          const anonymousCredential = await auth().signInAnonymously();
+          firebaseUser = anonymousCredential.user;
+          sessionMode = 'firebase';
+        } catch (error) {
+          if (!isFirebaseConfigurationError(error)) {
+            throw error;
+          }
+
+          console.warn('Firebase anonymous auth unavailable, continuing with local demo session.', error);
+          sessionMode = 'demo';
+        }
       }
     }
 
-    if (!firebaseUser) {
+    if (sessionMode === 'firebase' && !firebaseUser) {
       throw new Error('Unable to establish a secure session.');
     }
 
-    const publicKey = await SecurityService.bindDevice();
-    console.log('Device bound cryptographically with PK:', publicKey);
+    if (sessionMode === 'firebase' && firebaseUser) {
+      const publicKey = await SecurityService.bindDevice();
+      console.log('Device bound cryptographically with PK:', publicKey);
 
-    const userRef = firestore().collection('users').doc(firebaseUser.uid);
-    const profileSnap = await userRef.get();
-    const previous = profileSnap.data() || {};
-    const newUser = buildUserRecord(firebaseUser.uid, {
-      phone: normalizeIndianPhone(phone),
-      name: previous.name || 'New User',
-      role: previous.role ?? 'user',
-      reputationScore: previous.reputationScore ?? 4.5,
-      isVerified: previous.isVerified ?? false,
-      kycStatus: previous.kycStatus ?? 'pending',
-      verificationStatus: previous.verificationStatus ?? 'not_started',
-      verificationMethod: previous.verificationMethod ?? null,
-      verificationReviewNote: previous.verificationReviewNote ?? '',
+      const userRef = firestore().collection('users').doc(firebaseUser.uid);
+      const profileSnap = await userRef.get();
+      const previous = profileSnap.data() || {};
+      const newUser = buildUserRecord(firebaseUser.uid, {
+        phone: normalizedPhone,
+        name: previous.name || 'New User',
+        role: previous.role ?? 'user',
+        reputationScore: previous.reputationScore ?? 4.5,
+        isVerified: previous.isVerified ?? false,
+        kycStatus: previous.kycStatus ?? 'pending',
+        verificationStatus: previous.verificationStatus ?? 'not_started',
+        verificationMethod: previous.verificationMethod ?? null,
+        verificationReviewNote: previous.verificationReviewNote ?? '',
+      });
+
+      await userRef.set({
+        name: newUser.name,
+        phone: newUser.phone,
+        publicKey,
+        isVerified: newUser.isVerified,
+        kycStatus: newUser.kycStatus,
+        reputationScore: newUser.reputation,
+        authProvider: pendingFirebaseConfirmation ? 'phone' : 'anonymous_demo',
+        verificationStatus: previous.verificationStatus ?? 'not_started',
+        verificationMethod: previous.verificationMethod ?? null,
+        verificationReviewNote: previous.verificationReviewNote ?? '',
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        createdAt: previous.createdAt || firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      pendingFirebaseConfirmation = null;
+      pendingDemoOtp = null;
+
+      setUser(newUser);
+      setIdentityGate(buildIdentityGate(firebaseUser.isAnonymous, newUser));
+      await Promise.all([
+        persist(newUser),
+        AsyncStorage.setItem(SESSION_MODE_KEY, 'firebase'),
+      ]);
+      return;
+    }
+
+    let demoPublicKey = '';
+    try {
+      demoPublicKey = await SecurityService.bindDevice();
+      console.log('Device bound cryptographically with PK:', demoPublicKey);
+    } catch (error) {
+      console.warn('Device binding unavailable in local demo session.', error);
+    }
+
+    const demoUser = buildUserRecord(`demo-${normalizedPhone.replace(/\D/g, '')}`, {
+      phone: normalizedPhone,
+      name: 'Demo User',
+      role: 'user',
+      reputationScore: 4.5,
+      isVerified: false,
+      kycStatus: 'pending',
+      verificationStatus: 'not_started',
+      verificationMethod: null,
+      verificationReviewNote: demoPublicKey ? 'Local demo session active.' : 'Local demo session active without device binding.',
     });
-
-    await userRef.set({
-      name: newUser.name,
-      phone: newUser.phone,
-      publicKey,
-      isVerified: newUser.isVerified,
-      kycStatus: newUser.kycStatus,
-      reputationScore: newUser.reputation,
-      authProvider: pendingFirebaseConfirmation ? 'phone' : 'anonymous_demo',
-      verificationStatus: previous.verificationStatus ?? 'not_started',
-      verificationMethod: previous.verificationMethod ?? null,
-      verificationReviewNote: previous.verificationReviewNote ?? '',
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-      createdAt: previous.createdAt || firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
 
     pendingFirebaseConfirmation = null;
     pendingDemoOtp = null;
 
-    setUser(newUser);
-    setIdentityGate(buildIdentityGate(firebaseUser.isAnonymous, newUser));
-    await persist(newUser);
+    setUser(demoUser);
+    setIdentityGate(buildIdentityGate(true, demoUser));
+    await Promise.all([
+      persist(demoUser),
+      AsyncStorage.setItem(SESSION_MODE_KEY, 'demo'),
+    ]);
   }, [persist]);
 
   const logout = useCallback(async () => {
     await SecurityService.unbindDevice();
-    await auth().signOut();
+    try {
+      if (auth().currentUser) {
+        await auth().signOut();
+      }
+    } catch (error) {
+      if (!isFirebaseConfigurationError(error)) {
+        throw error;
+      }
+    }
     pendingFirebaseConfirmation = null;
     pendingDemoOtp = null;
     setUser(null);
@@ -202,7 +277,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       requiresKyc: true,
       reason: 'Complete secure phone sign-in before using listings or bookings.',
     });
-    await persist(null);
+    await Promise.all([
+      persist(null),
+      AsyncStorage.removeItem(SESSION_MODE_KEY),
+    ]);
   }, [persist]);
 
   const updateProfile = useCallback(async (updates: Partial<User>) => {
@@ -394,4 +472,13 @@ function buildIdentityGate(isAnonymousSession: boolean, user: User | null): Iden
     requiresKyc: false,
     reason: null,
   };
+}
+
+function isFirebaseConfigurationError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = `${error.message}`.toUpperCase();
+  return message.includes('CONFIGURATION_NOT_FOUND') || message.includes('AUTH/CONFIGURATION-NOT');
 }
