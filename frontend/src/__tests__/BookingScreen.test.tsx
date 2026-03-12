@@ -1,12 +1,20 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import BookingScreen from '../../app/booking';
 import { useAuth } from '../context/AuthContext';
 import { useMachine } from '@xstate/react';
 
 // Mock dependencies
 jest.mock('expo-router', () => ({
-    useLocalSearchParams: () => ({ itemData: JSON.stringify({ title: 'Test Drill', price: 500, deposit: 2000, lenderId: 'lender_1' }) }),
+    useLocalSearchParams: () => ({
+        itemData: JSON.stringify({
+            id: 'item_1',
+            title: 'Test Drill',
+            price: 500,
+            deposit: 2000,
+            lenderId: 'lender_1',
+        }),
+    }),
     useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
 }));
 
@@ -26,7 +34,16 @@ jest.mock('../services/PaymentPollingService', () => ({
 
 describe('BookingScreen', () => {
     beforeEach(() => {
-        (useAuth as jest.Mock).mockReturnValue({ user: { id: 'borrower_1' } });
+        (useAuth as jest.Mock).mockReturnValue({
+            user: { id: 'borrower_1' },
+            identityGate: {
+                canUsePayoutFlows: true,
+                isAnonymousSession: false,
+                requiresKyc: false,
+                reason: null,
+            },
+            logout: jest.fn(),
+        });
         (useMachine as jest.Mock).mockReturnValue([{ matches: () => false }, jest.fn()]);
     });
 
@@ -43,12 +60,14 @@ describe('BookingScreen', () => {
 
         const { getByText } = render(<BookingScreen />);
         
-        fireEvent.press(getByText('Confirm Booking & Pay'));
+        fireEvent.press(getByText('Initiate Protected Booking'));
         
-        expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-            type: 'INITIATE_BOOKING',
-            lenderId: 'lender_1',
-            amount: 500,
-        }));
+        await waitFor(() => {
+            expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'INITIATE_BOOKING',
+                lenderId: 'lender_1',
+                amount: 500,
+            }));
+        });
     });
 });
