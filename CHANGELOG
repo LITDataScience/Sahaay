@@ -1,3 +1,68 @@
+## 1.0.0 (2026-03-12)
+
+### ⚠ BREAKING CHANGES
+
+* execute V4 action plan — security remediation, repo hygiene, tRPC unification, strict TypeScript
+
+### Features
+
+* add premium geo listing flow and backend listing contracts ([fbaf17d](https://github.com/LITDataScience/Sahaay/commit/fbaf17dfaa0d005567dd568ed9b759b8c020096a))
+* complete sahaay v3 singularity architecture migration with supabase, expo router, and xstate ([a12850d](https://github.com/LITDataScience/Sahaay/commit/a12850d38044434acf66ea8ed4ec3bbfb43ac6bb))
+* enforce trusted identity on payout flows ([61875a8](https://github.com/LITDataScience/Sahaay/commit/61875a8f10d676befcb2dee9080ba101e3716c67))
+* integrate Turborepo caching + TypeDoc auto-documentation with GitHub Pages deployment pipeline ([33e0b46](https://github.com/LITDataScience/Sahaay/commit/33e0b46a5b565437917bb7c219d3ea006812c292))
+* setup frontend quality workflow (lint/tsc) ([887ae68](https://github.com/LITDataScience/Sahaay/commit/887ae688bca13272b8243cd6def7cda70eff02db))
+* ship AI-native marketplace platform ([95fb7d6](https://github.com/LITDataScience/Sahaay/commit/95fb7d66c8db11c86121631c56e80b0467e01a30))
+* UI overhaul, verify dependencies, and update build config ([befea48](https://github.com/LITDataScience/Sahaay/commit/befea4870c45c609804e2ee42f72f863cdb93c93))
+* unify frontend auth with Firebase App Check ([7ec823e](https://github.com/LITDataScience/Sahaay/commit/7ec823e9a2a3e4b8113eb60cdcdbee4581006d46))
+* **v3:** The Singularity Architecture Evolution ([fda781e](https://github.com/LITDataScience/Sahaay/commit/fda781ebf7bb65e9b15b7daa64293e42fea3fc83))
+
+### Bug Fixes
+
+* Add missing expo-build-properties plugin to package.json ([2386114](https://github.com/LITDataScience/Sahaay/commit/23861149ecb7244d23ef2913e0ea6c2c38b418f8))
+* add missing react-native-worklets peer dep for reanimated 4.x ([2339de8](https://github.com/LITDataScience/Sahaay/commit/2339de834bd00fd804a0ea498a49d9b6e3e4d2c5))
+* Allow google-services.json for EAS build ([f11c902](https://github.com/LITDataScience/Sahaay/commit/f11c9026d72aaae19d189decbad802000d964ce7))
+* apply monorepo pathing plugin for gradle ([92b995e](https://github.com/LITDataScience/Sahaay/commit/92b995ee0e411c4a6cf7d5fac8c8ecbbbb152db9))
+* **backend:** resolve XState V5 createActor types, cors imports, and internal modules blocking node compiler ([3309685](https://github.com/LITDataScience/Sahaay/commit/3309685051426ffa795c83f2ea9d547f4d7c398e))
+* **backend:** upgrade typescript to ^5.7.2 to resolve tRPC peer dependency crash ([b1b39dd](https://github.com/LITDataScience/Sahaay/commit/b1b39dd7e2feae3f7d2d064ed830131e5f0ddfa2))
+* bump android compileSdk and targetSdk to 35 ([168561c](https://github.com/LITDataScience/Sahaay/commit/168561c0a5802dfcb181d65e8ab06a16d3312bbc))
+* **ci:** globally install eas-cli to resolve exit code 127 command not found ([6c2a8fe](https://github.com/LITDataScience/Sahaay/commit/6c2a8fe58e5770b1a68063fec99d35fc112a3877))
+* **ci:** install eas-cli with npm ([a05d3c0](https://github.com/LITDataScience/Sahaay/commit/a05d3c091c9a0e1e60283aa4c272bc54118a1a7c))
+* **ci:** install pnpm and frontend dependencies inside isolated eas build runner ([10884cc](https://github.com/LITDataScience/Sahaay/commit/10884cc9f717ae6bf250368dbad8b288accc10bd))
+* **ci:** lint frontend node config files ([ce5cf63](https://github.com/LITDataScience/Sahaay/commit/ce5cf632a92495646799b524ee95ea7de78c8447))
+* **ci:** lock Href strict typing to bypass static CI route mapping errors ([cbfb492](https://github.com/LITDataScience/Sahaay/commit/cbfb492f1f1e3c79c7f61a3a6f56be59aa86b605))
+* **ci:** migrate firebase-functions to v6 modular API to resolve backend build errors ([e5fa867](https://github.com/LITDataScience/Sahaay/commit/e5fa867cfe31dd9ced034f0afd569e8a0b9dd660))
+* **ci:** remove corrupt chars and simplify auth ([f2d52dd](https://github.com/LITDataScience/Sahaay/commit/f2d52ddedad23d9ba2c236bff779e4d68f1cdcab))
+* **ci:** restore frontend Jest and release workflow ([57ef91c](https://github.com/LITDataScience/Sahaay/commit/57ef91cde92f1f9d204fee7adb684b3be83b75e6))
+* **ci:** setup pnpm before node ([e7fc777](https://github.com/LITDataScience/Sahaay/commit/e7fc77711d028d6ab8dd55c482e43379d96f82bd))
+* **ci:** setup pnpm before node cache to fix runner crash ([b6e68d6](https://github.com/LITDataScience/Sahaay/commit/b6e68d6c01df9fe18be051f4919b87d6e37b813e))
+* **ci:** trigger build and clean repository of large media ([ed06e5a](https://github.com/LITDataScience/Sahaay/commit/ed06e5a46d756f299bbe3492bd57940066925d19))
+* **ci:** typos and upgrade actions ([d92fa1b](https://github.com/LITDataScience/Sahaay/commit/d92fa1bd7b54cfc7dfd332d58738326f633cd34d))
+* delete stale npm lockfile causing phantom dependabot alerts, fix eas monorepo config ([e0b5499](https://github.com/LITDataScience/Sahaay/commit/e0b5499e6ea13ce60d90ec9b7b52c37bdf7b8c1b))
+* **deps:** install missing expo-router and watermelondb to fix CI typecheck ([f2a09b7](https://github.com/LITDataScience/Sahaay/commit/f2a09b7afb0a68010c32de77cee92094cfe14263))
+* **deps:** remove global ajv override crashing eslint pipeline, configure dependabot ignore for eslint v9 ([57f08a2](https://github.com/LITDataScience/Sahaay/commit/57f08a2c05bb82801718cd8719e9881a9b397539))
+* **deps:** resolve all dependabot security alerts via root overrides ([0cd3131](https://github.com/LITDataScience/Sahaay/commit/0cd313131aaff7c224aa02cab21834c23e7345ed))
+* **docs:** resolve typedoc compilation failures ([5087a68](https://github.com/LITDataScience/Sahaay/commit/5087a68716fa614d83fc6b8ad1db00f382d45485))
+* downgrade react-native-worklets to 0.5.x for reanimated 4.1 compat ([13d54a6](https://github.com/LITDataScience/Sahaay/commit/13d54a6abe6a722b8bcca705a9c3aea557c35f62))
+* **eas:** add @expo/config-plugins as explicit dep for withSecureScreen plugin ([4e81005](https://github.com/LITDataScience/Sahaay/commit/4e81005ca09c1d2da366207f35c7337071f2de3b))
+* Enforce pnpm, use latest EAS image, relax buildToolsVersion ([cf989d8](https://github.com/LITDataScience/Sahaay/commit/cf989d8b98b60db595537c03c1273435ef1b4980))
+* **frontend:** inject reanimated babel plugin and gesture handler root view to prevent instant UI thread crash on APK launch ([ba2f7c5](https://github.com/LITDataScience/Sahaay/commit/ba2f7c54c6885b08745b70ea2c8aac8677677fea))
+* **frontend:** remove duplicate react-native-worklets/plugin from babel to unblock JS bundler on cloud builds ([af9f801](https://github.com/LITDataScience/Sahaay/commit/af9f801117e3f6469d8a8f1f84a01eda353abd53))
+* **functions:** add skipLibCheck to tsconfig to prevent node_modules type errors from failing ci build ([77929b2](https://github.com/LITDataScience/Sahaay/commit/77929b20220289a03820722a7f105a803ba6aba1))
+* Ignore native folders to prevent EAS sync issues ([f0e83ba](https://github.com/LITDataScience/Sahaay/commit/f0e83ba2cb98476344d2510691c99c0e1335f641))
+* Increase Gradle memory and force clean build ([40c2a56](https://github.com/LITDataScience/Sahaay/commit/40c2a56310f2eb7ce788bbfe372ae22b5c42766c))
+* Remove invalid cache config from eas.json ([0d5ca0b](https://github.com/LITDataScience/Sahaay/commit/0d5ca0b138994168bd2868264272db5131779aac))
+* rename docs script to docs:generate to avoid pnpm built-in command collision ([00c70eb](https://github.com/LITDataScience/Sahaay/commit/00c70eb82719602d0af1700c3cbc55b9d46d6998))
+* resolve lint errors and upgrade security/test configurations ([ee998b3](https://github.com/LITDataScience/Sahaay/commit/ee998b37b888950a00d5575140bd6f7bea966f7e))
+* restore Android builds and automate releases ([12a37ed](https://github.com/LITDataScience/Sahaay/commit/12a37edda81ec6fadbe1f4492bb6a3fede73ac09))
+* **sync:** resolve missing index module blocking CI typecheck ([509c438](https://github.com/LITDataScience/Sahaay/commit/509c4388dc5296f70d96ed0ccc0fc97dab229b38))
+* transform project for local android builds and monorepo compatibility ([1d9e321](https://github.com/LITDataScience/Sahaay/commit/1d9e321eb340f1bea442a5efff113a4734a6d0c9))
+* **types:** resolve react-native-keychain type definition failure ([cf88f56](https://github.com/LITDataScience/Sahaay/commit/cf88f563d7f5df846219286da6eaddd266ca4042))
+* Upgrade Firebase SDKs to v23 and add build properties ([37d6dcd](https://github.com/LITDataScience/Sahaay/commit/37d6dcdd6b4aeca822f4b73bc9d2a46db6b1775a))
+
+### Code Refactoring
+
+* execute V4 action plan — security remediation, repo hygiene, tRPC unification, strict TypeScript ([fb3fd6b](https://github.com/LITDataScience/Sahaay/commit/fb3fd6be72a09dfb3696daf3c10bc0ac42a3cd28))
+
 # Changelog
 
 This file is managed by `semantic-release`.
