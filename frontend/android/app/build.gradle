@@ -86,6 +86,19 @@ def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBu
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def signingValue = { String localKey, String injectedPropertyKey = null ->
+    def value = findProperty(localKey) ?: System.getenv(localKey)
+    if (!value && injectedPropertyKey) {
+        value = findProperty(injectedPropertyKey)
+    }
+
+    return value?.toString()
+}
+def releaseStoreFilePath = signingValue('SAHAAY_UPLOAD_STORE_FILE', 'android.injected.signing.store.file')
+def releaseStorePassword = signingValue('SAHAAY_UPLOAD_STORE_PASSWORD', 'android.injected.signing.store.password')
+def releaseKeyAlias = signingValue('SAHAAY_UPLOAD_KEY_ALIAS', 'android.injected.signing.key.alias')
+def releaseKeyPassword = signingValue('SAHAAY_UPLOAD_KEY_PASSWORD', 'android.injected.signing.key.password')
+def hasExplicitReleaseSigning = [releaseStoreFilePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -110,15 +123,23 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (hasExplicitReleaseSigning) {
+                storeFile file(releaseStoreFilePath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (hasExplicitReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

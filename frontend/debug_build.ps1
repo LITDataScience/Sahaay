@@ -113,34 +113,6 @@ function Get-ExpoAndroidDeviceName {
     return $Serial
 }
 
-function Set-GradlePropertyValue {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Path,
-        [Parameter(Mandatory = $true)]
-        [string]$Key,
-        [Parameter(Mandatory = $true)]
-        [string]$Value
-    )
-
-    $lines = if (Test-Path $Path) { Get-Content $Path } else { @() }
-    $pattern = "^\Q$Key\E="
-    $updated = $false
-
-    for ($i = 0; $i -lt $lines.Count; $i++) {
-        if ($lines[$i] -match $pattern) {
-            $lines[$i] = "$Key=$Value"
-            $updated = $true
-        }
-    }
-
-    if (-not $updated) {
-        $lines += "$Key=$Value"
-    }
-
-    Set-Content -Path $Path -Value $lines -Encoding ascii
-}
-
 function Test-LocalTcpPort {
     param(
         [int]$Port
@@ -212,10 +184,12 @@ if (-not (Test-Path $localPropertiesPath)) {
 Write-Host "Java Version: 17.0.18" -ForegroundColor Green
 Write-Host "Android SDK: $env:ANDROID_HOME" -ForegroundColor Green
 
-# Ensure google-services.json is in the right place
-if (Test-Path "..\google-services.json") {
-    Write-Host "Syncing google-services.json from root..." -ForegroundColor Gray
-    Copy-Item "..\google-services.json" "google-services.json" -Force
+# Ensure google-services.json is in the right place for native Android builds
+$googleServicesSource = "google-services.json"
+$googleServicesTarget = "android/app/google-services.json"
+if (Test-Path $googleServicesSource) {
+    Write-Host "Syncing google-services.json into android/app..." -ForegroundColor Gray
+    Copy-Item $googleServicesSource $googleServicesTarget -Force
 }
 
 # Ensure dependencies are up to date
@@ -226,10 +200,8 @@ pnpm install
 Write-Host "Syncing native files (Prebuild)..." -ForegroundColor Cyan
 npx expo prebuild --platform android --clean
 
-$gradlePropertiesPath = "android/gradle.properties"
 $emulatorArchitectures = "x86_64"
-Set-GradlePropertyValue -Path $gradlePropertiesPath -Key "reactNativeArchitectures" -Value $emulatorArchitectures
-Write-Host "React Native Android architectures locked to: $emulatorArchitectures" -ForegroundColor Gray
+Write-Host "React Native Android architectures (local override): $emulatorArchitectures" -ForegroundColor Gray
 
 $deviceSerial = Get-HealthyAndroidDeviceSerial
 if ($null -eq $deviceSerial) {

@@ -15,6 +15,7 @@ on:
       - 'firebase/**'
       - 'package.json'
       - 'pnpm-workspace.yaml'
+  workflow_dispatch:
 
 jobs:
   lint-and-test:
@@ -43,6 +44,10 @@ jobs:
       - name: Unit Tests (Jest)
         run: |
           cd frontend && pnpm exec jest --passWithNoTests
+
+      - name: Unit Tests (Functions)
+        run: |
+          cd firebase/functions && pnpm exec vitest run src/__tests__
 
   build:
     name: Expo EAS Build
@@ -79,6 +84,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: cd frontend && eas build --profile preview --platform android --non-interactive
 
-      - name: EAS Build Production
+      - name: EAS Build Staging
         if: github.event_name == 'push'
+        run: cd frontend && eas build --profile staging --platform android --non-interactive
+
+      - name: EAS Build Production
+        if: github.event_name == 'workflow_dispatch'
         run: cd frontend && eas build --profile production --platform android --non-interactive

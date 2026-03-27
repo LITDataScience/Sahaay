@@ -3,7 +3,6 @@
 // © 2026 Sahaay Technologies Pvt. Ltd. All rights reserved.
 // SPDX-Header-End
 
-import { SecurityService } from './SecurityService';
 import functions from '@react-native-firebase/functions';
 
 export type PaymentStatus = 'processing' | 'success' | 'failed' | 'timeout';
@@ -30,14 +29,8 @@ export const PaymentPollingService = {
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                // Sign the poll request with the device's hardware key
-                // This ensures the polling request itself wasn't forged by a replay attack
-                const timestamp = Date.now().toString();
-                const signature = await SecurityService.signPayload(`${bookingId}|${timestamp}`);
-
-                // Simulated API Call to Sahaay Backend
-                console.log(`[Poll Attempt ${attempt}/${maxAttempts}] Querying Backend with Device Signature...`);
-                const status = await this.mockBackendStatusCheck(bookingId, signature);
+                console.log(`[Poll Attempt ${attempt}/${maxAttempts}] Querying Backend booking status...`);
+                const status = await this.fetchBackendStatus(bookingId);
 
                 if (status === 'success' || status === 'failed') {
                     console.log(`[Zero-Trust] Definitive Payment State Received: ${status.toUpperCase()}`);
@@ -63,11 +56,11 @@ export const PaymentPollingService = {
      * Real HTTP Callable that represents our Node.js Backend reading the database
      * state which is mutated exclusively by Razorpay/Cashfree Webhooks.
      */
-    async mockBackendStatusCheck(_bookingId: string, _signature: string): Promise<PaymentStatus> {
+    async fetchBackendStatus(bookingId: string): Promise<PaymentStatus> {
         try {
             const response = await functions().httpsCallable('tRPC')({
                 path: 'paymentStatus',
-                input: { bookingId: _bookingId, signature: _signature }
+                input: { bookingId }
             });
             const data = response.data as any;
             return data.status || 'processing';

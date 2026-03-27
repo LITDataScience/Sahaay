@@ -20,7 +20,9 @@ import { useAuth } from '../src/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { LogIn, Phone, ArrowRight, ShieldCheck } from 'lucide-react-native';
+import { ENABLE_DEMO_AUTH } from '../src/config/runtime';
 import { useAppTheme } from '../src/theme/provider';
+import { isSupportedIndianPhoneInput, sanitizeIndianPhoneInput } from '../src/utils/phone';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -36,19 +38,19 @@ const LoginScreen = () => {
 
 
   const handleSendOtp = () => {
-    if (phone.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+    if (!isSupportedIndianPhoneInput(phone)) {
+      Alert.alert('Error', 'Please enter a valid Indian mobile number.');
       return;
     }
 
     setIsBusy(true);
     requestPhoneOtp(phone)
       .then((result) => {
-        setSentOtp(result.code ?? null);
+        setSentOtp(result.mode === 'demo' ? result.code ?? null : null);
         setShowOtp(true);
         Alert.alert(
           'OTP Sent',
-          result.mode === 'demo'
+          result.mode === 'demo' && ENABLE_DEMO_AUTH
             ? `Use ${result.code} to continue (secure demo fallback).`
             : 'Enter the OTP sent to your phone.'
         );
@@ -110,8 +112,8 @@ const LoginScreen = () => {
                   placeholderTextColor={theme.colors.textMuted}
                   keyboardType="phone-pad"
                   value={phone}
-                  onChangeText={setPhone}
-                  maxLength={10}
+                  onChangeText={(value) => setPhone(sanitizeIndianPhoneInput(value))}
+                  maxLength={12}
                 />
               </View>
 
@@ -139,7 +141,7 @@ const LoginScreen = () => {
                 />
               </View>
 
-              {sentOtp && <Text style={styles.hint}>Demo OTP: {sentOtp}</Text>}
+              {ENABLE_DEMO_AUTH && sentOtp && <Text style={styles.hint}>Demo OTP: {sentOtp}</Text>}
 
               <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp} disabled={isBusy}>
                 {isBusy ? <ActivityIndicator color="#181411" /> : <Text style={styles.primaryButtonText}>Verify & Login</Text>}

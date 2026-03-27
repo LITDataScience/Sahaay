@@ -6,6 +6,7 @@ web-build/
 .eas/
 .gradle/
 build/
+.shortdeps/
 *.mp4
 *.MP4
 *.mov

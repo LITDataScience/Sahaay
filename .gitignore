@@ -27,6 +27,14 @@ pnpm-debug.log*
 **/out/
 **/web-build/
 
+# ----- Android / iOS build artifacts -----
+*.apk
+*.aab
+*.ipa
+
+# ----- Windows short native module path symlinks -----
+**/.shortdeps/
+
 # ----- Expo / React Native / Metro -----
 **/.expo/
 **/.expo/*
@@ -38,6 +46,11 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+frontend/credentials.json
+frontend/build.json
+frontend/android/key.properties
+**/*.jks
+**/*.keystore
 
 # ----- Prisma / local DBs -----
 **/prisma/*.db

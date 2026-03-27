@@ -33,18 +33,3 @@ expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
-
-// sahaay short native module paths
-[
-  ':react-native-screens': '.shortdeps/rns/android',
-  ':react-native-worklets': '.shortdeps/rnw/android',
-  ':react-native-reanimated': '.shortdeps/rnr/android',
-  ':expo-modules-core': '.shortdeps/emc/android',
-  ':react-native-gesture-handler': '.shortdeps/rngh/android',
-  ':react-native-safe-area-context': '.shortdeps/rnsac/android',
-  ':react-native-svg': '.shortdeps/rnsvg/android',
-].each { projectName, relativeAndroidDir ->
-  if (findProject(projectName) != null) {
-    project(projectName).projectDir = new File(rootDir, relativeAndroidDir)
-  }
-}

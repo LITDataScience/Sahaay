@@ -5,10 +5,11 @@ import { AuthProvider } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useProtectedRoute } from '../src/hooks/useProtectedRoute';
-import { Suspense, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { Suspense, useEffect, useState } from 'react';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ENFORCE_SECURE_RUNTIME } from '../src/config/runtime';
 import { ThemeProvider, useAppTheme } from '../src/theme/provider';
-import { activateAppCheck } from '../src/services/AppCheckService';
+import { activateAppCheck, validateSecureBackendAccess } from '../src/services/AppCheckService';
 import { flushMarketplaceEvents } from '../src/services/analytics';
 
 // Export Expo Router Error Boundary to catch deep-link rendering crashes
@@ -19,11 +20,93 @@ function RootLayoutNav() {
     // and forces a router.replace if the user shouldn't be here.
     useProtectedRoute();
     const { theme, mode } = useAppTheme();
+    const [secureRuntimeState, setSecureRuntimeState] = useState<'checking' | 'ready' | 'failed'>(
+        ENFORCE_SECURE_RUNTIME ? 'checking' : 'ready'
+    );
+    const [secureRuntimeError, setSecureRuntimeError] = useState<string | null>(null);
+    const [secureRuntimeAttempts, setSecureRuntimeAttempts] = useState(0);
 
     useEffect(() => {
-        activateAppCheck();
+        let active = true;
+
+        const bootstrapSecureRuntime = async () => {
+            try {
+                await activateAppCheck();
+
+                if (ENFORCE_SECURE_RUNTIME) {
+                    await validateSecureBackendAccess();
+                }
+
+                if (!active) {
+                    return;
+                }
+
+                setSecureRuntimeError(null);
+                setSecureRuntimeState('ready');
+            } catch (error) {
+                if (!active) {
+                    return;
+                }
+
+                setSecureRuntimeState('failed');
+                setSecureRuntimeError(
+                    error instanceof Error
+                        ? error.message
+                        : 'This build could not complete the secure startup validation.'
+                );
+            }
+        };
+
+        bootstrapSecureRuntime();
         flushMarketplaceEvents();
-    }, []);
+
+        return () => {
+            active = false;
+        };
+    }, [secureRuntimeAttempts]);
+
+    if (secureRuntimeState === 'checking') {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: theme.colors.background }}>
+                <ActivityIndicator size="large" color={theme.colors.accentStrong} />
+                <Text style={{ marginTop: 16, color: theme.colors.textPrimary, fontSize: 18, fontWeight: '700' }}>
+                    Verifying secure runtime
+                </Text>
+                <Text style={{ marginTop: 8, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>
+                    Checking App Check, Firebase callable access, and build configuration before the app continues.
+                </Text>
+            </View>
+        );
+    }
+
+    if (secureRuntimeState === 'failed') {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: theme.colors.background }}>
+                <Text style={{ color: theme.colors.textPrimary, fontSize: 22, fontWeight: '800', textAlign: 'center' }}>
+                    Secure startup failed
+                </Text>
+                <Text style={{ marginTop: 12, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 22 }}>
+                    {secureRuntimeError || 'This build could not verify secure Firebase access.'}
+                </Text>
+                <TouchableOpacity
+                    style={{
+                        marginTop: 20,
+                        backgroundColor: theme.colors.accent,
+                        paddingHorizontal: 20,
+                        paddingVertical: 14,
+                        borderRadius: 16,
+                    }}
+                    onPress={() => {
+                        setSecureRuntimeError(null);
+                        setSecureRuntimeState(ENFORCE_SECURE_RUNTIME ? 'checking' : 'ready');
+                        setSecureRuntimeAttempts((attempts) => attempts + 1);
+                    }}
+                >
+                    <Text style={{ color: '#181411', fontWeight: '800' }}>Retry secure check</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <>

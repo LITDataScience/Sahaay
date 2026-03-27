@@ -12,7 +12,16 @@
           "package_name": "com.shivshakti.sahaay"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "400664256540-20fahhlp2p0vecc1sjheohclrv4msbnu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.shivshakti.sahaay",
+            "certificate_hash": "797a6e02828afcd3dc3b77f7042212679ac1ae60"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD5Yv-tvsCzFea8s7jpZjSMpC4DnB29xc4"

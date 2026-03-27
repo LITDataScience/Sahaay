@@ -6,11 +6,25 @@
 
 ## Unreleased
 
-### Fixes
+### Features
 
-* stabilize local Android emulator builds with x86_64 debug installs, shorter native module paths, and explicit React Native autolinking
-* restore Expo Router login flow by bridging the route tree under `src/app` and avoiding dev-client deep link misrouting
-* add resilient auth fallbacks for missing Firebase config and missing native keychain bindings during local/demo sessions
+* **build**: split EAS build profiles into dev/preview/staging/production with per-env App Check provider and demo auth flags
+* **security**: env-gated demo auth with fail-closed production behavior; secure runtime validation with App Check token priming and retry logic
+* **ci**: staging profile auto-builds on push to main, production build on manual workflow_dispatch, Firebase Functions vitest step added
+
+### Bug Fixes
+
+* **auth**: fix phone number E.164 normalization — 10-digit Indian numbers starting with `91` no longer get double-prefixed; add `sanitizeIndianPhoneInput` / `normalizeIndianPhone` / `isSupportedIndianPhoneInput` utilities
+* **auth**: secure store fallback for `react-native-keychain` on emulators without native Keychain bindings
+* **backend**: harden `paymentStatus` tRPC endpoint — require authenticated user, verify booking actor participation, remove client-side signature, normalize payment status
+* **android**: conditional release signing in `build.gradle`; remove `reactNativeArchitectures` from `gradle.properties` to prevent ABI drift in release builds
+* **android**: disable `.shortdeps` Windows symlinks for EAS cloud builds via `SAHAAY_DISABLE_SHORTDEPS`; `eas-build-pre-install` hook copies `google-services.json` into place
+
+### Documentation
+
+* rewrite `docs/app_build_guide.md` with Firebase Phone OTP checklist, SHA fingerprint extraction script, App Check policy per profile
+* rewrite `e2e/maestro/happy_path.yaml` for phone-OTP login flow targeting `com.shivshakti.sahaay`
+* add `frontend/scripts/print-apk-signature.ps1` to extract APK signing fingerprints for Firebase console setup
 
 ## [1.0.1](https://github.com/LITDataScience/Sahaay/compare/v1.0.0...v1.0.1) (2026-03-12)
 

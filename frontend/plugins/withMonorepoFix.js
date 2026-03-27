@@ -40,12 +40,26 @@ const WINDOWS_SHORT_PATH_PACKAGES = [
   },
 ];
 
-function ensurePackageJunctions(platformProjectRoot) {
-  if (process.platform !== 'win32') {
-    return [];
+function shouldUseWindowsShortDeps() {
+  return process.platform === 'win32' && process.env.SAHAAY_DISABLE_SHORTDEPS !== 'true';
+}
+
+function stripShortPathOverrides(contents) {
+  const marker = '// sahaay short native module paths';
+  if (!contents.includes(marker)) {
+    return contents;
   }
 
+  return `${contents.split(marker)[0].trimEnd()}\n`;
+}
+
+function ensurePackageJunctions(platformProjectRoot) {
   const shortRoot = path.join(platformProjectRoot, '.shortdeps');
+
+  if (!shouldUseWindowsShortDeps()) {
+    fs.rmSync(shortRoot, { recursive: true, force: true });
+    return [];
+  }
 
   return WINDOWS_SHORT_PATH_PACKAGES.map(
     ({ packageName, projectName, shortDir }) => {
@@ -110,6 +124,9 @@ project.ext.set("REACT_NATIVE_WORKLETS_NODE_MODULES_DIR", new File(sahaayReactNa
     );
 
     if (!shortPathProjects.length) {
+      config.modResults.contents = stripShortPathOverrides(
+        config.modResults.contents
+      );
       return config;
     }
 

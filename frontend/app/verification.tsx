@@ -32,7 +32,9 @@ export default function VerificationScreen() {
     const [livenessTask, setLivenessTask] = useState('');
 
     useEffect(() => {
-        refreshVerificationStatus();
+        refreshVerificationStatus().catch((error) => {
+            console.warn('Verification status refresh unavailable.', error);
+        });
     }, [refreshVerificationStatus]);
 
     const startVerification = async (method: 'digilocker' | 'pan') => {
@@ -224,7 +226,17 @@ export default function VerificationScreen() {
                             ? 'Your documents and liveness signals were received. Our backend review pipeline is validating them now.'
                             : user?.verificationReviewNote || 'Please retry with clearer information and complete trust signals.'}
                     </Text>
-                    <TouchableOpacity style={styles.backButton} onPress={() => refreshVerificationStatus()}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => {
+                            refreshVerificationStatus().catch((error) => {
+                                Alert.alert(
+                                    'Refresh unavailable',
+                                    error instanceof Error ? error.message : 'Verification status could not be refreshed.'
+                                );
+                            });
+                        }}
+                    >
                         <Text style={styles.backButtonText}>Refresh Status</Text>
                     </TouchableOpacity>
                 </View>

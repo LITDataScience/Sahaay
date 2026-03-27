@@ -25,7 +25,9 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     getLocalPublishedListings().then((listings) => setListingCount(listings.length));
-    refreshVerificationStatus();
+    refreshVerificationStatus().catch((error) => {
+      console.warn('Profile verification status refresh unavailable.', error);
+    });
   }, [refreshVerificationStatus]);
 
   const onSave = async () => {

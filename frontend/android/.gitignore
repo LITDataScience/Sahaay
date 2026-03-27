@@ -12,6 +12,9 @@ local.properties
 *.hprof
 .cxx/
 .shortdeps/
+key.properties
+*.jks
+*.keystore
 
 # Bundle artifacts
 *.jsbundle

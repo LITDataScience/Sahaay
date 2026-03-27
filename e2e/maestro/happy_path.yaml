@@ -1,20 +1,26 @@
-appId: com.sahaay.app
+appId: com.shivshakti.sahaay
 ---
+# Phase 1 Android staging smoke flow.
+# Preconditions:
+# 1. Use a clean install of a staging/non-demo build.
+# 2. A publisher staging user has already created and published a verified listing.
+# 3. BORROWER_PHONE, BORROWER_OTP, and LISTING_QUERY are supplied as Maestro env vars.
+# 4. Accept Android location permission manually if the system dialog appears.
 - launchApp
-- assertVisible: "Login"
-- tapOn: "Email Address"
-- inputText: "test@sahaay.com"
-- tapOn: "Password"
-- inputText: "SecurePass123!"
-- tapOn: "Sign In"
-- assertVisible: "Explore Hyperlocal Items"
-- tapOn: "Search"
-- inputText: "Power Drill"
-- tapOn: "Power Drill - Bosch"
+- assertVisible: "Welcome Back"
+- tapOn: "Phone Number"
+- inputText: ${BORROWER_PHONE}
+- tapOn: "Continue"
+- assertVisible: "Enter the code sent to your phone"
+- tapOn: "Enter 6-digit OTP"
+- inputText: ${BORROWER_OTP}
+- tapOn: "Verify & Login"
+- assertVisible: "Nearby premium listings"
+- tapOn: "Search for items to borrow..."
+- inputText: ${LISTING_QUERY}
+- assertVisible: "Get secure quote"
+- tapOn: "Get secure quote"
 - assertVisible: "Book Item"
-- tapOn: "Confirm Booking & Pay"
-# Escrow and Payment Flow
-- assertVisible: "Payment Verified"
-- tapOn: "View Digital Handshake"
-- assertVisible: "Physical Escrow Handover"
-- assertVisible: "Mandatory Condition Check"
+- assertVisible: "Booking Summary"
+- tapOn: "Initiate Protected Booking"
+- assertVisible: "Protected booking started"

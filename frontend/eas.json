@@ -8,23 +8,60 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_WORKINGDIR": "frontend"
+        "EXPO_WORKINGDIR": "frontend",
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_ENABLE_DEMO_AUTH": "true",
+          "EXPO_PUBLIC_ANDROID_APP_CHECK_PROVIDER": "debug",
+          "EXPO_PUBLIC_ENFORCE_SECURE_RUNTIME": "false",
+        "SAHAAY_DISABLE_SHORTDEPS": "true"
       }
     },
     "preview": {
       "android": {
         "image": "latest",
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "remote"
       },
       "distribution": "internal",
       "env": {
-        "EXPO_WORKINGDIR": "frontend"
+        "EXPO_WORKINGDIR": "frontend",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_ENABLE_DEMO_AUTH": "false",
+          "EXPO_PUBLIC_ANDROID_APP_CHECK_PROVIDER": "debug",
+          "EXPO_PUBLIC_ENFORCE_SECURE_RUNTIME": "false",
+        "SAHAAY_DISABLE_SHORTDEPS": "true"
+      }
+    },
+    "staging": {
+      "android": {
+        "image": "latest",
+        "buildType": "apk",
+        "credentialsSource": "remote"
+      },
+      "distribution": "internal",
+      "env": {
+        "EXPO_WORKINGDIR": "frontend",
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_PUBLIC_ENABLE_DEMO_AUTH": "false",
+          "EXPO_PUBLIC_ANDROID_APP_CHECK_PROVIDER": "debug",
+          "EXPO_PUBLIC_ENFORCE_SECURE_RUNTIME": "false",
+        "SAHAAY_DISABLE_SHORTDEPS": "true"
       }
     },
     "production": {
       "autoIncrement": true,
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle",
+        "credentialsSource": "remote"
+      },
       "env": {
-        "EXPO_WORKINGDIR": "frontend"
+        "EXPO_WORKINGDIR": "frontend",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_ENABLE_DEMO_AUTH": "false",
+          "EXPO_PUBLIC_ANDROID_APP_CHECK_PROVIDER": "playIntegrity",
+          "EXPO_PUBLIC_ENFORCE_SECURE_RUNTIME": "true",
+        "SAHAAY_DISABLE_SHORTDEPS": "true"
       }
     }
   },

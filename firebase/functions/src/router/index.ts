@@ -27,6 +27,10 @@ export interface Context {
 // 1. Initialize tRPC
 const t = initTRPC.context<Context>().create();
 
+function isAppCheckEnforced() {
+    return (process.env.APP_CHECK_ENFORCEMENT ?? 'optional').toLowerCase() === 'required';
+}
+
 // 2. Define reusable Middlewares (Zero-Trust checks)
 const requireAuth = t.middleware(({ ctx, next }) => {
     if (!ctx.auth) {
@@ -36,7 +40,7 @@ const requireAuth = t.middleware(({ ctx, next }) => {
 });
 
 const requireAppCheck = t.middleware(({ ctx, next }) => {
-    if (ctx.app === undefined) {
+    if (ctx.app === undefined && isAppCheckEnforced()) {
         // Enforce AppCheck verify
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Suspicious origin. AppCheck missing.' });
     }
@@ -244,15 +248,26 @@ export const appRouter = t.router({
 
     // Payment Status Poller
     paymentStatus: guardedProcedure
-        .input(z.object({ bookingId: z.string(), signature: z.string() }))
+        .input(z.object({ bookingId: z.string().min(1) }))
         .query(async ({ input, ctx }) => {
             const db = admin.firestore();
-            const snap = await db.collection('payments').where('bookingId', '==', input.bookingId).limit(1).get();
-            if (snap.empty) {
-                return { status: 'processing' };
+            const bookingSnap = await db.collection('bookings').doc(input.bookingId).get();
+            if (!bookingSnap.exists) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Booking not found.' });
             }
-            const payment = snap.docs[0].data();
-            return { status: payment.status };
+
+            const booking = bookingSnap.data();
+            const isBookingActor = booking?.borrowerId === ctx.auth!.uid || booking?.lenderId === ctx.auth!.uid;
+            if (!isBookingActor) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Booking not found.' });
+            }
+
+            const paymentSnap = await db.collection('payments').where('bookingId', '==', input.bookingId).limit(1).get();
+            const rawStatus = paymentSnap.empty
+                ? booking?.paymentStatus ?? booking?.status
+                : paymentSnap.docs[0].data()?.status ?? booking?.paymentStatus ?? booking?.status;
+
+            return { status: normalizeClientPaymentStatus(rawStatus) };
         }),
 
     getBookingQuote: guardedProcedure
@@ -325,9 +340,25 @@ export const appRouter = t.router({
 // this is the ONLY thing the Frontend imports, achieving 0kb bundle overhead
 export type AppRouter = typeof appRouter;
 
+function normalizeClientPaymentStatus(rawStatus: unknown): 'processing' | 'success' | 'failed' {
+    const status = typeof rawStatus === 'string' ? rawStatus : '';
+
+    if (['escrow_held', 'completed', 'payment_succeeded', 'success', 'succeeded'].includes(status)) {
+        return 'success';
+    }
+
+    if (['payment_failed', 'failed', 'cancelled', 'refunded'].includes(status)) {
+        return 'failed';
+    }
+
+    return 'processing';
+}
+
 // 4. Firebase Cloud Function Adapter
 export const trpcFunction = onCall({
-    enforceAppCheck: true,
+    // Internal APKs are sideloaded during QA, so strict App Check is enabled only
+    // when the deployment explicitly opts into it for production traffic.
+    enforceAppCheck: isAppCheckEnforced(),
     maxInstances: 10
 }, async (request) => {
     // tRPC typically operates over HTTP, but we can bridge it over HTTPS Callables 

@@ -8,7 +8,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
+import { ENABLE_DEMO_AUTH } from '../config/runtime';
 import { SecurityService } from '../services/SecurityService';
+import { normalizeIndianPhone } from '../utils/phone';
 
 export type User = {
   id: string;
@@ -45,6 +47,14 @@ type AuthContextValue = {
 
 const STORAGE_KEY = 'sahaay.auth.user.v2';
 const SESSION_MODE_KEY = 'sahaay.auth.session-mode.v1';
+const FIREBASE_PHONE_AUTH_SETUP_MESSAGE =
+  'Phone OTP is not configured for this Android build. In Firebase console, enable Authentication > Phone, verify the Android app com.shivshakti.sahaay exists, add the current release SHA-1 and SHA-256 fingerprints for the APK signing key, then refresh google-services.json and rebuild.';
+const DEFAULT_IDENTITY_GATE: IdentityGate = {
+  canUsePayoutFlows: false,
+  isAnonymousSession: false,
+  requiresKyc: true,
+  reason: 'Complete secure phone sign-in before using listings or bookings.',
+};
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 let pendingFirebaseConfirmation: FirebaseAuthTypes.ConfirmationResult | null = null;
@@ -52,12 +62,7 @@ let pendingDemoOtp: string | null = null;
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [identityGate, setIdentityGate] = useState<IdentityGate>({
-    canUsePayoutFlows: false,
-    isAnonymousSession: false,
-    requiresKyc: true,
-    reason: 'Complete secure phone sign-in before using listings or bookings.',
-  });
+  const [identityGate, setIdentityGate] = useState<IdentityGate>(DEFAULT_IDENTITY_GATE);
   const [isLoading, setIsLoading] = useState(true);
 
   // Firebase Auth State Listener for App Hydration
@@ -69,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       ]);
 
       if (!firebaseUser) {
-        if (sessionMode === 'demo' && raw) {
+        if (ENABLE_DEMO_AUTH && sessionMode === 'demo' && raw) {
           const localUser = JSON.parse(raw) as User;
           setUser(localUser);
           setIdentityGate(buildIdentityGate(true, localUser));
@@ -78,12 +83,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         setUser(null);
-        setIdentityGate({
-          canUsePayoutFlows: false,
-          isAnonymousSession: false,
-          requiresKyc: true,
-          reason: 'Complete secure phone sign-in before using listings or bookings.',
-        });
+        setIdentityGate(DEFAULT_IDENTITY_GATE);
+        pendingFirebaseConfirmation = null;
+        pendingDemoOtp = null;
         await Promise.all([
           AsyncStorage.removeItem(STORAGE_KEY),
           AsyncStorage.removeItem(SESSION_MODE_KEY),
@@ -139,6 +141,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       return { mode: 'firebase' as const };
     } catch (error) {
+      if (isFirebaseConfigurationError(error)) {
+        const userFacingError = new Error(FIREBASE_PHONE_AUTH_SETUP_MESSAGE);
+        userFacingError.cause = error;
+
+        if (!ENABLE_DEMO_AUTH) {
+          throw userFacingError;
+        }
+      }
+
+      if (!ENABLE_DEMO_AUTH || !isFirebaseConfigurationError(error)) {
+        throw error;
+      }
+
       console.warn('Firebase phone auth unavailable, using secure demo OTP fallback.', error);
       pendingFirebaseConfirmation = null;
       pendingDemoOtp = String(Math.floor(100000 + Math.random() * 900000));
@@ -156,6 +171,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const credential = await pendingFirebaseConfirmation.confirm(otp);
       firebaseUser = credential?.user ?? null;
     } else {
+      if (!ENABLE_DEMO_AUTH) {
+        throw new Error('Demo authentication is disabled for this build. Please request a real OTP and try again.');
+      }
+
       if (!pendingDemoOtp || pendingDemoOtp !== otp) {
         throw new Error('Invalid OTP. Please request a new code and try again.');
       }
@@ -271,12 +290,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     pendingFirebaseConfirmation = null;
     pendingDemoOtp = null;
     setUser(null);
-    setIdentityGate({
-      canUsePayoutFlows: false,
-      isAnonymousSession: false,
-      requiresKyc: true,
-      reason: 'Complete secure phone sign-in before using listings or bookings.',
-    });
+    setIdentityGate(DEFAULT_IDENTITY_GATE);
     await Promise.all([
       persist(null),
       AsyncStorage.removeItem(SESSION_MODE_KEY),
@@ -305,7 +319,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const refreshVerificationStatus = useCallback(async () => {
     const currentUser = auth().currentUser;
     if (!currentUser) {
-      return;
+      throw new Error('Verification status requires a secure signed-in session.');
+    }
+
+    if (currentUser.isAnonymous) {
+      throw new Error('Complete secure phone sign-in before checking verification status.');
     }
 
     const response = await functions().httpsCallable('tRPC')({
@@ -339,7 +357,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const submitVerification = useCallback(async (method: 'digilocker' | 'pan', livenessConfidence: number, notes?: string) => {
     const currentUser = auth().currentUser;
     if (!currentUser) {
-      return;
+      throw new Error('Verification submission requires a secure signed-in session.');
+    }
+
+    if (currentUser.isAnonymous) {
+      throw new Error('Complete secure phone sign-in before submitting verification.');
     }
 
     await functions().httpsCallable('tRPC')({
@@ -402,11 +424,6 @@ export const useAuth = (): AuthContextValue => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
-
-function normalizeIndianPhone(phone: string) {
-  const digits = phone.replace(/\D/g, '');
-  return digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
-}
 
 function buildUserRecord(
   uid: string,

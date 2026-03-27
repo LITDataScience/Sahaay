@@ -4,6 +4,12 @@ const path = require('path');
 const projectRoot = __dirname;
 const androidRoot = path.join(projectRoot, 'android');
 const shortRoot = path.join(androidRoot, '.shortdeps');
+const shortDepsEnabled =
+  process.platform === 'win32' && process.env.SAHAAY_DISABLE_SHORTDEPS !== 'true';
+
+if (!shortDepsEnabled) {
+  fs.rmSync(shortRoot, { recursive: true, force: true });
+}
 
 function normalizePathForGradle(targetPath) {
   return targetPath.replace(/\\/g, '/');
@@ -38,6 +44,10 @@ const shortPathPackages = {
 };
 
 function ensurePackageJunction(packageName, shortDir) {
+  if (!shortDepsEnabled) {
+    return null;
+  }
+
   const packageRoot = path.dirname(
     require.resolve(`${packageName}/package.json`, {
       paths: [projectRoot],
@@ -52,25 +62,27 @@ function ensurePackageJunction(packageName, shortDir) {
   return linkPath;
 }
 
-const dependencies = Object.fromEntries(
-  Object.entries(shortPathPackages).map(
-    ([packageName, { shortDir, cmakeListsPath }]) => {
-      const linkPath = ensurePackageJunction(packageName, shortDir);
+const dependencies = shortDepsEnabled
+  ? Object.fromEntries(
+      Object.entries(shortPathPackages).map(
+        ([packageName, { shortDir, cmakeListsPath }]) => {
+          const linkPath = ensurePackageJunction(packageName, shortDir);
 
-      return [
-        packageName,
-        {
-          platforms: {
-            android: {
-              sourceDir: normalizePathForGradle(path.join(linkPath, 'android')),
-              cmakeListsPath: normalizePathForGradle(path.join(linkPath, cmakeListsPath)),
+          return [
+            packageName,
+            {
+              platforms: {
+                android: {
+                  sourceDir: normalizePathForGradle(path.join(linkPath, 'android')),
+                  cmakeListsPath: normalizePathForGradle(path.join(linkPath, cmakeListsPath)),
+                },
+              },
             },
-          },
-        },
-      ];
-    }
-  )
-);
+          ];
+        }
+      )
+    )
+  : {};
 
 module.exports = {
   dependencies,
