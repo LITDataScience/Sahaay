@@ -1,6 +1,7 @@
 # Sahaay Production Readiness, Cloud, and Store Deployment Audit
 
-**Date:** March 2026  
+**Date:** April 2026 (updated)  
+**Last Updated:** 2026-04-02 — Phase 1 launch hardening complete; new findings from weekly technical debt scan added.  
 **Audience:** Founder, engineering, product, operations, investors  
 **Objective:** Replace the previous speculative self-review with a grounded audit of the current `Sahaay` repository, focused on production readiness, cloud economics, app-store deployment, and the mandatory work still required before launch.
 
@@ -140,32 +141,27 @@ So the accurate answer is:
 
 ## 5. Brutally Honest Production Readiness Rating
 
+*Updated April 2026 after Phase 1 completion.*
 
-| Dimension                 | Score / 10 | Why                                                                                           |
-| ------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
-| Product architecture fit  | 7.5        | Coherent Firebase-first mobile stack, but still prototype-grade in trust-sensitive areas      |
-| Store readiness           | 4.0        | Android release signing is unsafe, iOS path is missing, submission automation is incomplete   |
-| Backend security posture  | 4.5        | App Check exists, but there are open authorization and public endpoint risks                  |
-| Payments / KYC realism    | 3.0        | Large parts are placeholders, simulated, or only documented in UI copy                        |
-| CI/CD maturity            | 6.0        | Build/release workflows exist, but backend deploy and environment discipline are weak         |
-| Test readiness            | 3.5        | Very small test surface; E2E assets are stale                                                 |
-| Cloud scalability posture | 6.0        | Firebase can scale for early stage, but architecture cleanup is required before scale is safe |
-| Overall launch readiness  | 4.5        | Internal testing is viable; production launch still needs a hardening sprint                  |
+| Dimension                 | Score / 10 | Delta | Why                                                                                                                    |
+| ------------------------- | ---------- | ----- | ---------------------------------------------------------------------------------------------------------------------- |
+| Product architecture fit  | 7.5        | —     | Coherent Firebase-first mobile stack, but still prototype-grade in trust-sensitive areas                               |
+| Store readiness           | 5.5        | +1.5  | Release signing fixed (EAS remote credentials), demo auth gated; iOS still missing, submission automation incomplete   |
+| Backend security posture  | 6.0        | +1.5  | paymentStatus hardened, App Check debug/playIntegrity split, optional enforcement for internal QA builds               |
+| Payments / KYC realism    | 3.0        | —     | Large parts are placeholders, simulated, or only documented in UI copy                                                 |
+| CI/CD maturity            | 6.5        | +0.5  | Staging/production EAS split, Firebase Functions vitest step, Node 20 actions deprecation acknowledged                 |
+| Test readiness            | 4.0        | +0.5  | Maestro happy path rewritten for phone-OTP flow; paymentStatus tests added; overall surface still thin                 |
+| Cloud scalability posture | 6.0        | —     | Firebase can scale for early stage, but architecture cleanup is required before scale is safe                          |
+| Overall launch readiness  | 5.5        | +1.0  | Phase 1 hardening complete; auth, signing, and payment blockers resolved; Phase 2-3 work remains before store release  |
 
 
 ---
 
 ## 6. Critical Findings That Block Production
 
-### 6.1 Release Signing Is Not Production-Safe
+### 6.1 ~~Release Signing Is Not Production-Safe~~ RESOLVED (Phase 1)
 
-`frontend/android/app/build.gradle` signs the `release` build with the debug keystore.
-
-That is an immediate blocker for store release. Before launch, you need:
-
-- a real production keystore
-- Play App Signing setup
-- secrets managed outside the repo
+`frontend/android/app/build.gradle` now uses conditional release signing: it reads signing credentials from `SAHAAY_UPLOAD_*` Gradle properties or EAS remote credentials. Debug keystore is no longer used for release builds. EAS build profiles (`staging`, `production`) use `credentialsSource: remote`.
 
 ### 6.2 iOS Is Not Repository-Ready
 
@@ -176,17 +172,9 @@ That means:
 - Android can continue toward release
 - iOS cannot be considered launch-ready from the current repository state
 
-### 6.3 Demo Auth Is Still In The Product Path
+### 6.3 ~~Demo Auth Is Still In The Product Path~~ RESOLVED (Phase 1)
 
-`frontend/src/context/AuthContext.tsx` contains demo OTP and local session fallback behavior.  
-`frontend/app/login.tsx` can surface the demo OTP in the UI.
-
-That is acceptable for internal development, but not for production release.
-
-Before launch:
-
-- gate demo auth behind explicit dev-only flags, or
-- remove it from production bundles entirely
+Demo OTP is now fully gated behind `EXPO_PUBLIC_ENABLE_DEMO_AUTH`. The flag is `true` only in the `development` EAS profile. All other profiles (`preview`, `staging`, `production`) set it to `false`. The login UI no longer renders demo hints in non-dev builds. `AuthContext.tsx` fails closed if no real Firebase user exists.
 
 ### 6.4 SecurityService Is Not The Security It Claims To Be
 
@@ -203,15 +191,9 @@ You must either:
 - implement real device-bound cryptography, or
 - stop making stronger security claims than the code actually provides
 
-### 6.5 `paymentStatus` Has An Authorization Gap
+### 6.5 ~~`paymentStatus` Has An Authorization Gap~~ RESOLVED (Phase 1)
 
-`firebase/functions/src/router/index.ts` exposes `paymentStatus` and accepts `bookingId` + `signature`, but the route:
-
-- does not verify the signature
-- does not verify the caller belongs to the booking
-- reads the payment record directly
-
-That is a direct trust boundary issue.
+`paymentStatus` now uses `guardedProcedure` (App Check → auth required). It loads the booking, verifies `borrowerId === ctx.auth.uid || lenderId === ctx.auth.uid`, returns `NOT_FOUND` for non-members, and normalizes the payment status. Client-side fake signatures were removed.
 
 ### 6.6 The AI Endpoint Is Public And Cost-Risky
 
@@ -282,22 +264,20 @@ That is not enough for a trust-sensitive marketplace with documents, listings, a
 
 So the offline story is still conceptual, not launch-ready.
 
-### 7.5 Tests Are Thin And The E2E Assets Are Stale
+### 7.5 Tests Are Thin And The E2E Assets Are Partially Updated
 
-Current reality in repo:
+Phase 1 status:
 
-- 2 frontend tests
-- 3 backend tests
-- `e2e/maestro/happy_path.yaml` uses an old app id and old email/password flow
-- `frontend/.detoxrc.js` references missing/misaligned assets
+- `e2e/maestro/happy_path.yaml` rewritten for phone-OTP flow targeting `com.shivshakti.sahaay`
+- `firebase/functions/src/__tests__/paymentStatus.test.ts` added
+- `frontend/.detoxrc.js` still references missing/misaligned assets
+- Overall test surface remains thin for a trust-sensitive marketplace
 
-That is not enough for store-grade confidence in payments, auth, location, search, bookings, and verification flows.
+Still requires: end-to-end auth, location, listing, booking, payment, and verification flow coverage before store submission.
 
-### 7.6 A Failed EAS Build Artifact Is Checked In
+### 7.6 ~~A Failed EAS Build Artifact Is Checked In~~ RESOLVED (Phase 1)
 
-`frontend/build.json` is a committed failed build artifact. That file should not live in source control.
-
-It is not a catastrophe, but it is a sign of release hygiene drift.
+`frontend/build.json` was deleted. `*.apk`, `*.aab`, `*.ipa`, and `**/.shortdeps/` are now gitignored.
 
 ---
 
@@ -373,13 +353,13 @@ It is not a catastrophe, but it is a sign of release hygiene drift.
 ## 10. Stakeholder Timeline
 
 
-| Phase                             | Timeline  | Primary Owners          | Stakeholders              | Deliverables                                                                                            | Exit Criteria                                                                               |
-| --------------------------------- | --------- | ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Phase 1: Launch Hardening         | Week 1-2  | Mobile + Backend        | Founder, Product          | remove demo auth from prod, fix release signing, tighten critical auth/payment endpoint issues          | staging Android build can complete login, location, listing, and booking without demo paths |
-| Phase 2: Trust And Payments       | Week 3-4  | Backend + Product + Ops | Founder, Finance, Support | real webhook flow, booking/payment authorization fixes, KYC decision on real provider vs deferred scope | every money-moving flow is server-verified and auditable                                    |
-| Phase 3: Release Operations       | Week 5-6  | Mobile + QA + Ops       | Founder, Legal, Support   | store metadata, privacy/support docs, EAS submit path, crash/alert instrumentation, runbooks            | release candidate approved for Play internal testing                                        |
-| Phase 4: Scale Baseline           | Week 7-8  | Backend + DevOps        | Founder, Finance          | env split, secrets discipline, budgets, Typesense production plan, Functions/Cloud Run tuning           | production backend has observable spend, logs, alerts, and rollback path                    |
-| Phase 5: iOS Readiness (Optional) | Week 8-10 | Mobile                  | Founder, Product          | generate iOS native project, signing/provisioning, parity testing                                       | iOS build can be archived and tested through TestFlight                                     |
+| Phase                             | Timeline  | Status              | Primary Owners          | Stakeholders              | Deliverables                                                                                            | Exit Criteria                                                                               |
+| --------------------------------- | --------- | ------------------- | ----------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Phase 1: Launch Hardening         | Week 1-2  | **COMPLETE**        | Mobile + Backend        | Founder, Product          | demo auth gated, release signing fixed, paymentStatus hardened, phone normalization fixed, E2E updated  | Staging Android build completes login, location, listing without demo paths ✓               |
+| Phase 2: Trust And Payments       | Week 3-4  | **NEXT**            | Backend + Product + Ops | Founder, Finance, Support | real webhook flow, booking/payment authorization fixes, KYC decision on real provider vs deferred scope | every money-moving flow is server-verified and auditable                                    |
+| Phase 3: Release Operations       | Week 5-6  | Pending             | Mobile + QA + Ops       | Founder, Legal, Support   | store metadata, privacy/support docs, EAS submit path, crash/alert instrumentation, runbooks            | release candidate approved for Play internal testing                                        |
+| Phase 4: Scale Baseline           | Week 7-8  | Pending             | Backend + DevOps        | Founder, Finance          | env split, secrets discipline, budgets, Typesense production plan, Functions/Cloud Run tuning           | production backend has observable spend, logs, alerts, and rollback path                    |
+| Phase 5: iOS Readiness (Optional) | Week 8-10 | Pending             | Mobile                  | Founder, Product          | generate iOS native project, signing/provisioning, parity testing                                       | iOS build can be archived and tested through TestFlight                                     |
 
 
 ---
@@ -468,17 +448,17 @@ This section turns the audit into a working execution pack. It is intentionally 
 ### 13.1 P0 Launch Blockers
 
 
-| ID   | Blocker                                                                        | Repo Evidence                                                                    | Why It Is P0                                                                             | Primary Owner    | Required Fix                                                                                            |
-| ---- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
-| P0-1 | Android release signing uses the debug keystore                                | `frontend/android/app/build.gradle`                                              | You should not ship a production Android binary signed this way                          | Mobile           | Create a production keystore, move signing secrets into EAS/CI secret storage, enable Play App Signing  |
-| P0-2 | Demo OTP and demo session logic can still enter the production path            | `frontend/src/context/AuthContext.tsx`, `frontend/app/login.tsx`                 | Store reviewers and real users must never see a demo auth path in production             | Mobile + Backend | Gate demo auth behind explicit development-only flags or strip it from production builds                |
-| P0-3 | `paymentStatus` does not verify signature or booking ownership strongly enough | `firebase/functions/src/router/index.ts`                                         | This is a trust-boundary and authorization issue in a payment-adjacent flow              | Backend          | Enforce actor ownership, validate signatures server-side, log all payment status access                 |
-| P0-4 | Public AI endpoint is exposed without a strong protection envelope             | `firebase/functions/src/agents/genius.ts`                                        | Abuse can create direct cost and security pressure                                       | Backend          | Add auth, add rate limiting, add logging, and move this endpoint to Cloud Run if usage becomes material |
-| P0-5 | Real payment webhook path is not production implemented                        | `firebase/functions/webhookHandler.ts`                                           | Without an authoritative webhook, payment state cannot be trusted                        | Backend          | Implement provider webhooks with replay protection, idempotency, and auditable status transitions       |
-| P0-6 | iOS path is incomplete if iOS is part of launch scope                          | `frontend/app.json`, `frontend/.detoxrc.js`, missing `frontend/ios/`             | You cannot claim an iOS launch track without a real iOS native project and signing path  | Mobile           | Generate and stabilize the iOS native project, then configure signing and delivery                      |
-| P0-7 | Storage rules rely too much on app-side behavior                               | `firebase/storage.rules`                                                         | Signed-in users can write in places that need stronger server-side ownership enforcement | Backend          | Tighten rules around uploads, ownership, and membership checks                                          |
-| P0-8 | Environment and secret separation are weak                                     | `firebase/firebase.json`, `frontend/eas.json`, no visible `.firebaserc` strategy | This increases the chance of shipping dev configuration into production                  | Backend + DevOps | Split dev, staging, and production projects; formalize secrets and release environments                 |
-| P0-9 | End-to-end and release validation assets are stale                             | `e2e/maestro/happy_path.yaml`, `frontend/.detoxrc.js`                            | Production launch without a valid release-path test suite is unnecessary risk            | QA + Mobile      | Replace stale E2E definitions with current login, location, listing, booking, and payment flows         |
+| ID   | Blocker                                                                        | Status              | Repo Evidence                                                                    | Why It Is P0                                                                             | Primary Owner    | Required Fix                                                                                            |
+| ---- | ------------------------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| P0-1 | Android release signing uses the debug keystore                                | **RESOLVED** (Ph 1) | `frontend/android/app/build.gradle`                                              | You should not ship a production Android binary signed this way                          | Mobile           | Done — conditional release signing via EAS remote credentials                                          |
+| P0-2 | Demo OTP and demo session logic can still enter the production path            | **RESOLVED** (Ph 1) | `frontend/src/context/AuthContext.tsx`, `frontend/app/login.tsx`                 | Store reviewers and real users must never see a demo auth path in production             | Mobile + Backend | Done — gated behind `EXPO_PUBLIC_ENABLE_DEMO_AUTH`, disabled in staging/production                     |
+| P0-3 | `paymentStatus` does not verify signature or booking ownership strongly enough | **RESOLVED** (Ph 1) | `firebase/functions/src/router/index.ts`                                         | This is a trust-boundary and authorization issue in a payment-adjacent flow              | Backend          | Done — actor ownership enforced, fake signature removed, status normalized                              |
+| P0-4 | Public AI endpoint is exposed without a strong protection envelope             | **OPEN**            | `firebase/functions/src/agents/genius.ts`                                        | Abuse can create direct cost and security pressure                                       | Backend          | Add auth, add rate limiting, add logging, and move this endpoint to Cloud Run if usage becomes material |
+| P0-5 | Real payment webhook path is not production implemented                        | **OPEN**            | `firebase/functions/webhookHandler.ts`                                           | Without an authoritative webhook, payment state cannot be trusted                        | Backend          | Implement provider webhooks with replay protection, idempotency, and auditable status transitions       |
+| P0-6 | iOS path is incomplete if iOS is part of launch scope                          | **OPEN**            | `frontend/app.json`, `frontend/.detoxrc.js`, missing `frontend/ios/`             | You cannot claim an iOS launch track without a real iOS native project and signing path  | Mobile           | Generate and stabilize the iOS native project, then configure signing and delivery                      |
+| P0-7 | Storage rules rely too much on app-side behavior                               | **OPEN**            | `firebase/storage.rules`                                                         | Signed-in users can write in places that need stronger server-side ownership enforcement | Backend          | Tighten rules around uploads, ownership, and membership checks                                          |
+| P0-8 | Environment and secret separation are weak                                     | **OPEN**            | `firebase/firebase.json`, `frontend/eas.json`, no visible `.firebaserc` strategy | This increases the chance of shipping dev configuration into production                  | Backend + DevOps | Split dev, staging, and production projects; formalize secrets and release environments                 |
+| P0-9 | End-to-end and release validation assets are stale                             | **PARTIAL** (Ph 1)  | `e2e/maestro/happy_path.yaml`, `frontend/.detoxrc.js`                            | Production launch without a valid release-path test suite is unnecessary risk            | QA + Mobile      | Maestro happy path updated; Detox assets still stale; full payment+verification E2E remains open        |
 
 
 ### 13.2 Store Submission Checklist
@@ -602,3 +582,58 @@ Operating rules for this architecture:
 
 
 Use budget alerts in Firebase and Google Cloud from day one. Do not wait until production traffic exists.
+
+---
+
+## 14. Weekly Technical Debt Scan — April 2026
+
+*This section is updated periodically as a rolling hygiene log.*
+
+### 14.1 Git Sync Status
+
+- Local `main` was behind remote by 1 commit (`chore(release): 1.1.0 [skip ci]`) — now resolved via `git pull --rebase`.
+- Working tree is clean. All Phase 1 changes pushed at commit `83680e6`.
+
+### 14.2 GitHub Actions Health
+
+| Workflow                | Status       | Notes                                                                                                                                     |
+| ----------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Zero-Trust EAS Build Gate | Passing      | Runs on push to `main`; staging EAS build triggers correctly                                                                              |
+| Release                 | Passing      | Semantic-release auto-bumped to v1.1.0 after Phase 1 push                                                                                |
+| Auto-Generate Documentation | Passing  | TypeDoc → GitHub Pages on push                                                                                                            |
+| CodeQL                  | **FAILING**  | `Perform CodeQL Analysis` fails: "Code scanning is not enabled for this repository." Manual fix required in GitHub Settings → Code Security → Code Scanning. codeql-action upgraded to v4 in this scan (was v3). |
+| Dependabot Updates      | Active       | Multiple security update PRs auto-merging. Healthy behavior.                                                                              |
+| Stale                   | Passing      | Routine cron job.                                                                                                                         |
+
+**Manual action required for CodeQL**: Go to `https://github.com/LITDataScience/Sahaay/settings/security_analysis` and enable "Code scanning". The workflow file is already correct after the v3 → v4 upgrade.
+
+### 14.3 Open Dependabot PRs — Triage
+
+19 open PRs as of 2026-04-02. Grouped by action:
+
+**Merge (low risk):**
+#125 (`actions/deploy-pages` 4→5), #124 (`actions/configure-pages` 5→6), #123 (`pnpm/action-setup` 4→5), #121 (`lru-cache` patch), #116 (`typescript` patch in functions), #115 (`typescript` patch in root), #113 (`@shopify/flash-list` minor), #112 (`lucide-react-native` minor), #111 (`react-native-safe-area-context` minor), #103 (`actions/upload-pages-artifact` 3→4), #97 (`react-native-web` patch)
+
+**Close (Expo SDK boundary — requires full SDK 55 upgrade first):**
+#122 (`expo-router` 6 → 55), #120 (`expo-notifications` 0.32 → 55)
+
+**Review before merging (major version jumps):**
+#118 (`vitest` 3→4), #117 (`@vitest/coverage-v8` 3→4), #119 (`@types/node` 22→25), #98 (`react-native-reanimated` minor), #96/#94 (`react-native-worklets` minor)
+
+### 14.4 Transitive Dependency Vulnerabilities
+
+30+ open Dependabot alerts. All are transitive (dev tooling chain, not production app runtime). Packages affected: `handlebars`, `node-forge`, `picomatch`, `brace-expansion`, `lodash/lodash-es`, `xmldom`, `path-to-regexp`, `fast-xml-parser`, `flatted`, `yaml`, `undici`, `tar`.
+
+**Mitigated in this scan**: Added `pnpm.overrides` in root `package.json` for `handlebars ^4.7.9`, `picomatch ^2.3.1`, `flatted ^3.4.2`, `fast-xml-parser ^4.5.3`, `yaml ^2.8.3`, `@xmldom/xmldom ^0.9.9`, `path-to-regexp ^8.4.2`, `brace-expansion ^2.0.1`. Lockfile regenerated.
+
+### 14.5 New Technical Debt Items Identified
+
+| ID    | Item                                                                    | Impact | Priority |
+| ----- | ----------------------------------------------------------------------- | ------ | -------- |
+| TD-1  | `react-native-keychain` not in `frontend/package.json` direct deps; pulled only via `@types/react-native-keychain` dev dep — fragile | Medium | Phase 2 |
+| TD-2  | tRPC minor version skew: frontend `^11.10.0` vs functions `^11.12.0` — align on same range | Low    | Phase 2 |
+| TD-3  | CI Node version inconsistency: `eas-build.yml` and `docs.yml` use Node 20 (deprecated), `release.yml` uses Node 24 — standardize on 22 LTS | Low    | Phase 3 |
+| TD-4  | Expo SDK 55 upgrade signaled by Dependabot (#122, #120); current codebase on SDK 54 — plan upgrade window | Medium | Phase 3 |
+| TD-5  | `SecurityService.ts` still uses SHA-512/SHA-256 hashing with `Date.now()` entropy and claims hardware-backed key semantics — misleading comment at minimum, real device-bound crypto required for production trust claims | High   | Phase 2 |
+| TD-6  | `genius` AI endpoint has no auth, no rate limit, wide-open CORS — production cost and abuse risk | High   | Phase 2 (P0-4) |
+| TD-7  | `pnpm` self-update available: 10.4.0 → 10.33.0 — consider updating when convenient | Low    | Backlog |
