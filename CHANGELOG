@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/LITDataScience/Sahaay/compare/v1.1.0...v1.1.1) (2026-04-02)
+
+### Bug Fixes
+
+* remove brace-expansion override that broke TypeDoc ESM import ([1038a69](https://github.com/LITDataScience/Sahaay/commit/1038a69e4e7e20daa1a5390dec85053872e3f6fb))
+
 ## [1.1.0](https://github.com/LITDataScience/Sahaay/compare/v1.0.2...v1.1.0) (2026-03-27)
 
 ### Features
